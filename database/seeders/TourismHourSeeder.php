@@ -13,7 +13,7 @@ class TourismHourSeeder extends Seeder
     public function run(): void
     {
         $days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-        
+
         // Pantai Bali - Buka setiap hari 06:00 - 18:00
         foreach ($days as $day) {
             DB::table('tourism_hour')->insert([
