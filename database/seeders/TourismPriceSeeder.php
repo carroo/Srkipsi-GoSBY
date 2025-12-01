@@ -13,101 +13,113 @@ class TourismPriceSeeder extends Seeder
     public function run(): void
     {
         $prices = [
-            // Pantai Bali
+            // Tugu Pahlawan
             [
                 'tourism_id' => 1,
-                'type' => 'Dewasa',
-                'price' => 50000,
-            ],
-            [
-                'tourism_id' => 1,
-                'type' => 'Anak-anak',
-                'price' => 25000,
-            ],
-            [
-                'tourism_id' => 1,
-                'type' => 'Parkir Motor',
+                'type' => 'Tiket Masuk',
                 'price' => 5000,
             ],
-            [
-                'tourism_id' => 1,
-                'type' => 'Parkir Mobil',
-                'price' => 10000,
-            ],
-            // Gunung Bromo
+            // Kebun Binatang Surabaya
             [
                 'tourism_id' => 2,
-                'type' => 'Masuk Taman',
-                'price' => 75000,
-            ],
-            [
-                'tourism_id' => 2,
-                'type' => 'Jeep 4WD (6 jam)',
-                'price' => 1200000,
-            ],
-            [
-                'tourism_id' => 2,
-                'type' => 'Pemandu Wisata',
-                'price' => 300000,
-            ],
-            // Candi Borobudur
-            [
-                'tourism_id' => 3,
-                'type' => 'Wisatawan Lokal',
-                'price' => 30000,
-            ],
-            [
-                'tourism_id' => 3,
-                'type' => 'Wisatawan Mancanegara',
-                'price' => 200000,
-            ],
-            [
-                'tourism_id' => 3,
-                'type' => 'Sunrise Tour',
-                'price' => 75000,
-            ],
-            // Kawah Ijen
-            [
-                'tourism_id' => 4,
-                'type' => 'Tiket Masuk',
-                'price' => 100000,
-            ],
-            [
-                'tourism_id' => 4,
-                'type' => 'Pemandu Wisata',
-                'price' => 500000,
-            ],
-            // Taman Mini Indonesia Indah
-            [
-                'tourism_id' => 5,
-                'type' => 'Tiket Masuk Umum',
-                'price' => 25000,
-            ],
-            [
-                'tourism_id' => 5,
-                'type' => 'Tiket Masuk Anak',
+                'type' => 'Tiket Dewasa',
                 'price' => 15000,
             ],
             [
-                'tourism_id' => 5,
-                'type' => 'Tiket Keluarga',
-                'price' => 80000,
+                'tourism_id' => 2,
+                'type' => 'Tiket Anak',
+                'price' => 10000,
             ],
-            // Raja Ampat
+            // House of Sampoerna
             [
-                'tourism_id' => 6,
+                'tourism_id' => 3,
                 'type' => 'Tiket Masuk',
-                'price' => 150000,
+                'price' => 25000,
+            ],
+            [
+                'tourism_id' => 3,
+                'type' => 'Tiket Wisatawan Asing',
+                'price' => 50000,
+            ],
+            // Monumen Kapal Selam
+            [
+                'tourism_id' => 4,
+                'type' => 'Tiket Masuk',
+                'price' => 15000,
+            ],
+            [
+                'tourism_id' => 4,
+                'type' => 'Tiket Anak',
+                'price' => 10000,
+            ],
+            // Suramadu National Bridge - Gratis untuk pejalan kaki
+            [
+                'tourism_id' => 5,
+                'type' => 'Tiket Masuk Area Observasi',
+                'price' => 0,
+            ],
+            // Ciputra Waterpark
+            [
+                'tourism_id' => 6,
+                'type' => 'Tiket Masuk Weekday',
+                'price' => 75000,
             ],
             [
                 'tourism_id' => 6,
-                'type' => 'Paket Snorkeling (sehari)',
-                'price' => 500000,
+                'type' => 'Tiket Masuk Weekend',
+                'price' => 100000,
             ],
             [
                 'tourism_id' => 6,
-                'type' => 'Paket Diving (sehari)',
-                'price' => 750000,
+                'type' => 'Tiket Anak',
+                'price' => 50000,
+            ],
+            // Taman Bungkul - Gratis
+            [
+                'tourism_id' => 7,
+                'type' => 'Tiket Masuk',
+                'price' => 0,
+            ],
+            // Masjid Al Akbar - Gratis
+            [
+                'tourism_id' => 8,
+                'type' => 'Tiket Masuk',
+                'price' => 0,
+            ],
+            // Pantai Kenjeran
+            [
+                'tourism_id' => 9,
+                'type' => 'Tiket Masuk',
+                'price' => 5000,
+            ],
+            // Museum WR Soepratman
+            [
+                'tourism_id' => 10,
+                'type' => 'Tiket Masuk',
+                'price' => 5000,
+            ],
+            [
+                'tourism_id' => 10,
+                'type' => 'Tiket Anak',
+                'price' => 2000,
+            ],
+            // Grand City Mall Surabaya - Gratis masuk
+            [
+                'tourism_id' => 11,
+                'type' => 'Tiket Masuk',
+                'price' => 0,
+            ],
+            // Tunjungan Plaza - Gratis masuk
+            [
+                'tourism_id' => 12,
+                'type' => 'Tiket Masuk',
+                'price' => 0,
+            ],
+            // Pakuwon Mall - Gratis masuk
+            [
+                'tourism_id' => 13,
+                'type' => 'Tiket Masuk',
+                'price' => 0,
             ],
         ];
 

@@ -13,14 +13,14 @@ class CategorySeeder extends Seeder
     public function run(): void
     {
         $categories = [
-            ['name' => 'Pantai', 'description' => 'Destinasi wisata pantai dengan pemandangan laut yang indah'],
-            ['name' => 'Gunung', 'description' => 'Destinasi wisata gunung untuk pendaki dan pencinta alam'],
-            ['name' => 'Budaya', 'description' => 'Destinasi wisata budaya dengan kekayaan tradisi lokal'],
-            ['name' => 'Kuliner', 'description' => 'Tempat wisata kuliner untuk menikmati makanan khas daerah'],
-            ['name' => 'Hiburan', 'description' => 'Taman hiburan dan wahana permainan seru untuk keluarga'],
-            ['name' => 'Sejarah', 'description' => 'Situs bersejarah dan monumen bersejarah yang bernilai'],
-            ['name' => 'Alam', 'description' => 'Destinasi wisata alam dengan flora dan fauna yang unik'],
-            ['name' => 'Adventure', 'description' => 'Aktivitas petualangan menegangkan untuk pencari adrenalin'],
+            ['name' => 'Sejarah', 'description' => 'Situs bersejarah dan monumen perjuangan di Surabaya'],
+            ['name' => 'Hiburan', 'description' => 'Taman hiburan, wahana permainan, dan rekreasi keluarga'],
+            ['name' => 'Religi', 'description' => 'Wisata religi seperti masjid dan tempat ibadah'],
+            ['name' => 'Alam', 'description' => 'Wisata alam seperti taman kota dan pantai'],
+            ['name' => 'Budaya', 'description' => 'Museum dan tempat bersejarah budaya Surabaya'],
+            ['name' => 'Kuliner', 'description' => 'Tempat wisata kuliner dan makanan khas Surabaya'],
+            ['name' => 'Edukasi', 'description' => 'Wisata edukasi seperti museum dan kebun binatang'],
+            ['name' => 'Modern', 'description' => 'Ikon modern dan landmark kota Surabaya'],
         ];
 
         foreach ($categories as $category) {

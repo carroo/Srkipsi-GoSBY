@@ -44,5 +44,8 @@ class DatabaseSeeder extends Seeder
 
         // Seed tourism facility
         $this->call(TourismFacilitySeeder::class);
+
+        // Seed tourism file
+        $this->call(TourismFileSeeder::class);
     }
 }

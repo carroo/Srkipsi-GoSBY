@@ -534,119 +534,85 @@
         </p>
 
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <!-- Destination 1: Taman Hiburan Jawa Timur -->
-            <div class="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-2xl transition duration-300 transform hover:scale-105 hover:-translate-y-2 animate-fade-in-up group">
+            @forelse($popularTourism as $index => $tourism)
+            <a href="{{ route('tourism.show', $tourism->id) }}" class="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-2xl transition duration-300 transform hover:scale-105 hover:-translate-y-2 animate-fade-in-up group block" style="animation-delay: {{ $index * 0.1 }}s;">
                 <div class="overflow-hidden h-48 bg-gray-200 relative">
-                    <img src="https://picsum.photos/400/300?random=2" alt="Taman Hiburan Jawa Timur Park" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
-                    <div class="absolute top-0 left-0 bg-blue-600 text-white px-3 py-1 m-2 rounded-full text-sm font-bold">Populer</div>
-                </div>
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Taman Hiburan Jawa Timur Park</h3>
-                    <p class="text-gray-600 mb-4">
-                        Taman hiburan terbesar di Jawa Timur dengan wahana permainan seru untuk segala usia.
-                        Nikmati permainan anak-anak, roller coaster mendebarkan, dan pertunjukan spektakuler setiap hari.
-                    </p>
-                    <div class="flex justify-between items-center">
-                        <span class="text-yellow-500 font-semibold">⭐ 4.7/5</span>
-                        <span class="text-gray-500 text-sm">Rp 150.000/orang</span>
-                    </div>
-                </div>
-            </div>
+                    @if($tourism->files->isNotEmpty())
+                        <img src="{{ asset('storage/' . $tourism->files->first()->file_path) }}"
+                             alt="{{ $tourism->name }}"
+                             class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                    @else
+                        <img src="https://picsum.photos/400/300?random={{ $index + 2 }}"
+                             alt="{{ $tourism->name }}"
+                             class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                    @endif
 
-            <!-- Destination 2: Monumen Jalesveva Jayamahe -->
-            <div class="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-2xl transition duration-300 transform hover:scale-105 hover:-translate-y-2 animate-fade-in-up group" style="animation-delay: 0.1s;">
-                <div class="overflow-hidden h-48 bg-gray-200 relative">
-                    <img src="https://picsum.photos/400/300?random=3" alt="Monumen Jalesveva Jayamahe" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
-                    <div class="absolute top-0 left-0 bg-green-600 text-white px-3 py-1 m-2 rounded-full text-sm font-bold">Sejarah</div>
+                    @if($tourism->categories->isNotEmpty())
+                        @php
+                            $categoryColors = [
+                                'bg-blue-600',
+                                'bg-green-600',
+                                'bg-teal-600',
+                                'bg-amber-600',
+                                'bg-purple-600',
+                                'bg-red-600',
+                                'bg-indigo-600',
+                                'bg-pink-600',
+                                'bg-cyan-600',
+                                'bg-emerald-600',
+                            ];
+                            // Limit to max 3 categories
+                            $displayCategories = $tourism->categories->take(3);
+                        @endphp
+                        <div class="absolute top-0 left-0 m-2 flex flex-wrap gap-1.5">
+                            @foreach($displayCategories as $catIndex => $category)
+                                @php
+                                    $color = $categoryColors[$catIndex % count($categoryColors)];
+                                @endphp
+                                <div class="{{ $color }} text-white px-2.5 py-1 rounded-full text-xs font-bold shadow-md">
+                                    {{ $category->name }}
+                                </div>
+                            @endforeach
+                            @if($tourism->categories->count() > 3)
+                                <div class="bg-gray-800 bg-opacity-80 text-white px-2.5 py-1 rounded-full text-xs font-bold shadow-md">
+                                    +{{ $tourism->categories->count() - 3 }}
+                                </div>
+                            @endif
+                        </div>
+                    @else
+                        <div class="absolute top-0 left-0 bg-blue-600 text-white px-3 py-1 m-2 rounded-full text-sm font-bold">Populer</div>
+                    @endif
                 </div>
                 <div class="p-6">
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Monumen Jalesveva Jayamahe</h3>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">{{ $tourism->name }}</h3>
                     <p class="text-gray-600 mb-4">
-                        Monumen bersejarah yang melambangkan kejayaan armada nasional Indonesia.
-                        Lokasi strategis dengan pemandangan laut yang indah dan nilai edukatif sejarah tinggi.
+                        {{ Str::limit($tourism->description, 150) }}
                     </p>
                     <div class="flex justify-between items-center">
-                        <span class="text-yellow-500 font-semibold">⭐ 4.5/5</span>
-                        <span class="text-gray-500 text-sm">Gratis</span>
+                        <span class="text-yellow-500 font-semibold">⭐ {{ number_format($tourism->rating, 1) }}/5</span>
+                        @if($tourism->prices->isNotEmpty())
+                            @php
+                                $minPrice = $tourism->prices->min('price');
+                            @endphp
+                            <span class="text-gray-500 text-sm">
+                                @if($minPrice == 0)
+                                    Gratis
+                                @else
+                                    Rp {{ number_format($minPrice, 0, ',', '.') }}
+                                @endif
+                            </span>
+                        @else
+                            <span class="text-gray-500 text-sm">-</span>
+                        @endif
                     </div>
                 </div>
+            </a>
+            @empty
+            <!-- Fallback destinations if no data in database -->
+            <div class="col-span-3 text-center py-12">
+                <p class="text-gray-500 text-lg">Belum ada destinasi wisata yang tersedia.</p>
             </div>
-
-            <!-- Destination 3: Pantai Kenjeran -->
-            <div class="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-2xl transition duration-300 transform hover:scale-105 hover:-translate-y-2 animate-fade-in-up group" style="animation-delay: 0.2s;">
-                <div class="overflow-hidden h-48 bg-gray-200 relative">
-                    <img src="https://picsum.photos/400/300?random=4" alt="Pantai Kenjeran" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
-                    <div class="absolute top-0 left-0 bg-teal-600 text-white px-3 py-1 m-2 rounded-full text-sm font-bold">Pantai</div>
-                </div>
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Pantai Kenjeran</h3>
-                    <p class="text-gray-600 mb-4">
-                        Pantai pasir putih dengan suasana santai dan fasilitas lengkap untuk bersantai.
-                        Tempat populer untuk menikmati sunset, makan seafood segar, dan berbagai aktivitas pantai.
-                    </p>
-                    <div class="flex justify-between items-center">
-                        <span class="text-yellow-500 font-semibold">⭐ 4.6/5</span>
-                        <span class="text-gray-500 text-sm">Rp 25.000/orang</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Destination 4: Museum House of Sampoerna -->
-            <div class="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-2xl transition duration-300 transform hover:scale-105 hover:-translate-y-2 animate-fade-in-up group" style="animation-delay: 0.3s;">
-                <div class="overflow-hidden h-48 bg-gray-200 relative">
-                    <img src="https://picsum.photos/400/300?random=5" alt="House of Sampoerna" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
-                    <div class="absolute top-0 left-0 bg-amber-600 text-white px-3 py-1 m-2 rounded-full text-sm font-bold">Museum</div>
-                </div>
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">House of Sampoerna</h3>
-                    <p class="text-gray-600 mb-4">
-                        Museum dan pusat budaya di bangunan bersejarah Belanda. Pelajari sejarah rokok,
-                        nikmati arsitektur klasik, dan kunjungi galeri seni lokal dengan koleksi menarik.
-                    </p>
-                    <div class="flex justify-between items-center">
-                        <span class="text-yellow-500 font-semibold">⭐ 4.8/5</span>
-                        <span class="text-gray-500 text-sm">Rp 50.000/orang</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Destination 5: Kebun Binatang Surabaya -->
-            <div class="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-2xl transition duration-300 transform hover:scale-105 hover:-translate-y-2 animate-fade-in-up group" style="animation-delay: 0.4s;">
-                <div class="overflow-hidden h-48 bg-gray-200 relative">
-                    <img src="https://picsum.photos/400/300?random=6" alt="Kebun Binatang Surabaya" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
-                    <div class="absolute top-0 left-0 bg-green-500 text-white px-3 py-1 m-2 rounded-full text-sm font-bold">Keluarga</div>
-                </div>
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Kebun Binatang Surabaya</h3>
-                    <p class="text-gray-600 mb-4">
-                        Kebun binatang terbesar kedua di Indonesia dengan ribuan hewan dari berbagai belahan dunia.
-                        Tempat edukasi dan rekreasi keluarga dengan berbagai atraksi hewan sepanjang hari.
-                    </p>
-                    <div class="flex justify-between items-center">
-                        <span class="text-yellow-500 font-semibold">⭐ 4.7/5</span>
-                        <span class="text-gray-500 text-sm">Rp 80.000/orang</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Destination 6: Dolly Tradisional -->
-            <div class="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-2xl transition duration-300 transform hover:scale-105 hover:-translate-y-2 animate-fade-in-up group" style="animation-delay: 0.5s;">
-                <div class="overflow-hidden h-48 bg-gray-200 relative">
-                    <img src="https://picsum.photos/400/300?random=7" alt="Dolly Tradisional" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
-                    <div class="absolute top-0 left-0 bg-purple-600 text-white px-3 py-1 m-2 rounded-full text-sm font-bold">Budaya</div>
-                </div>
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Dolly Tradisional</h3>
-                    <p class="text-gray-600 mb-4">
-                        Kawasan bersejarah dengan arsitektur unik dan jalanan yang penuh warna budaya lokal.
-                        Tempat menarik untuk fotografi, memahami sejarah sosial, dan menikmati suasana autentik Surabaya.
-                    </p>
-                    <div class="flex justify-between items-center">
-                        <span class="text-yellow-500 font-semibold">⭐ 4.4/5</span>
-                        <span class="text-gray-500 text-sm">Gratis</span>
-                    </div>
-                </div>
-            </div>
+            @endforelse
         </div>
     </div>
 </section>
@@ -666,7 +632,7 @@
             Mulai rencanakan itinerary wisata Anda hari ini dengan teknologi cerdas kami.
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up" style="animation-delay: 0.4s;">
-            <a href="/app" class="inline-block bg-white text-blue-600 font-bold py-4 px-10 rounded-lg hover:bg-gray-100 hover:shadow-xl transition duration-300 transform hover:scale-105 text-lg">
+            <a href="{{ route('tourism.index') }}" class="inline-block bg-white text-blue-600 font-bold py-4 px-10 rounded-lg hover:bg-gray-100 hover:shadow-xl transition duration-300 transform hover:scale-105 text-lg">
                 Buat Itinerary Sekarang
             </a>
             <a href="#how-it-works" class="inline-block bg-blue-700 hover:bg-blue-800 text-white font-bold py-4 px-10 rounded-lg transition duration-300 text-lg border-2 border-white hover:shadow-xl transform hover:scale-105">
@@ -684,7 +650,7 @@
     <div class="max-w-6xl mx-auto px-4">
         <div class="grid md:grid-cols-4 gap-8 text-center">
             <div class="p-6 rounded-lg bg-linear-to-br from-blue-50 to-indigo-50 hover:shadow-lg transition duration-300 animate-fade-in-up transform hover:-translate-y-2">
-                <div class="text-4xl font-bold bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2 animate-pulse">500+</div>
+                <div class="text-4xl font-bold bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2 animate-pulse">{{ $stats['total_destinations'] }}+</div>
                 <p class="text-gray-600 font-semibold">Destinasi Wisata</p>
             </div>
             <div class="p-6 rounded-lg bg-linear-to-br from-green-50 to-teal-50 hover:shadow-lg transition duration-300 animate-fade-in-up transform hover:-translate-y-2" style="animation-delay: 0.1s;">
