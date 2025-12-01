@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Skripsi')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 antialiased">
     <!-- Navigation -->
@@ -45,15 +47,34 @@
 
                 <!-- Right Side - Auth Buttons -->
                 <div class="flex items-center space-x-2 sm:space-x-3">
-                    <!-- Login Button -->
-                    <button class="hidden sm:inline-block px-4 py-2 text-gray-700 font-medium hover:text-blue-600 hover:bg-gray-50 rounded-lg transition duration-300">
-                        Masuk
-                    </button>
+                    @auth('web')
+                        <!-- User Dropdown -->
+                        <div class="relative">
+                            <button id="userMenuButton" class="flex items-center space-x-2 px-4 py-2 text-gray-700 font-medium hover:bg-gray-50 rounded-lg transition duration-300">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span class="hidden sm:inline">{{ Auth::user()->name }}</span>
+                            </button>
+                            <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+                                <a href="{{ route('trip-cart.index') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Trip Cart</a>
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button type="submit" class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100">Logout</button>
+                                </form>
+                            </div>
+                        </div>
+                    @else
+                        <!-- Login Button -->
+                        <a href="{{ route('login') }}" class="hidden sm:inline-block px-4 py-2 text-gray-700 font-medium hover:text-blue-600 hover:bg-gray-50 rounded-lg transition duration-300">
+                            Masuk
+                        </a>
 
-                    <!-- Primary CTA Button -->
-                    <a href="/app" class="hidden sm:inline-block bg-linear-to-r from-blue-600 to-indigo-600 text-white font-semibold py-2 px-5 rounded-lg hover:shadow-lg hover:shadow-blue-500/30 transition duration-300 transform hover:-translate-y-0.5 whitespace-nowrap text-sm">
-                        Mulai Sekarang
-                    </a>
+                        <!-- Primary CTA Button -->
+                        <a href="{{ route('register') }}" class="hidden sm:inline-block bg-linear-to-r from-blue-600 to-indigo-600 text-white font-semibold py-2 px-5 rounded-lg hover:shadow-lg hover:shadow-blue-500/30 transition duration-300 transform hover:-translate-y-0.5 whitespace-nowrap text-sm">
+                            Daftar Sekarang
+                        </a>
+                    @endauth
 
                     <!-- Mobile Menu Button -->
                     <button id="mobile-menu-btn" class="md:hidden inline-flex p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition duration-300">
@@ -96,6 +117,29 @@
 
         // Close mobile menu when clicking on links
         document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', function() {
+                document.getElementById('mobile-menu').classList.add('hidden');
+            });
+        });
+        
+        // User dropdown toggle
+        const userMenuButton = document.getElementById('userMenuButton');
+        const userDropdown = document.getElementById('userDropdown');
+        
+        if (userMenuButton && userDropdown) {
+            userMenuButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                userDropdown.classList.toggle('hidden');
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!userMenuButton.contains(e.target) && !userDropdown.contains(e.target)) {
+                    userDropdown.classList.add('hidden');
+                }
+            });
+        }
+    </script>
             link.addEventListener('click', function() {
                 document.getElementById('mobile-menu').classList.add('hidden');
             });
@@ -157,5 +201,7 @@
             </div>
         </div>
     </footer>
+
+    @yield('scripts')
 </body>
 </html>

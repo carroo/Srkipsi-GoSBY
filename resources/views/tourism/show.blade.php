@@ -421,10 +421,20 @@
                     <!-- Action Button -->
                     <div class="bg-gradient-to-br from-green-50 to-teal-50 rounded-2xl shadow-lg p-6 border-2 border-green-200 animate-fade-in-up" style="animation-delay: 0.4s;">
                         <h3 class="text-lg font-bold text-gray-900 mb-3">Tertarik Berkunjung?</h3>
-                        <p class="text-gray-600 text-sm mb-4">Tambahkan destinasi ini ke dalam itinerary wisata Anda!</p>
-                        <a href="/app" class="block w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold py-3 px-4 rounded-lg text-center transition duration-300 shadow-md">
-                            Buat Itinerary
-                        </a>
+                        <p class="text-gray-600 text-sm mb-4">Tambahkan destinasi ini ke dalam trip cart Anda!</p>
+                        
+                        @auth
+                            <button id="addToTripCart" data-tourism-id="{{ $tourism->id }}" class="block w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold py-3 px-4 rounded-lg text-center transition duration-300 shadow-md">
+                                <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                <span id="buttonText">Tambah ke Trip Cart</span>
+                            </button>
+                        @else
+                            <a href="{{ route('login') }}" class="block w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold py-3 px-4 rounded-lg text-center transition duration-300 shadow-md">
+                                Login untuk Menambahkan
+                            </a>
+                        @endauth
                     </div>
                 </div>
             </div>
@@ -487,4 +497,96 @@
     </section>
 @endif
 
+@endsection
+
+@section('scripts')
+<script>
+    $(document).ready(function() {
+        $('#addToTripCart').on('click', function() {
+            const tourismId = $(this).data('tourism-id');
+            const $buttonText = $('#buttonText');
+            const originalText = $buttonText.text();
+            const $button = $(this);
+            
+            // Disable button and show loading
+            $button.prop('disabled', true);
+            $buttonText.text('Menambahkan...');
+            
+            $.ajax({
+                url: '{{ route('trip-cart.add') }}',
+                type: 'POST',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    tourism_id: tourismId
+                },
+                dataType: 'json',
+                success: function(data) {
+                    if (data.success) {
+                        // Success notification
+                        $buttonText.text('✓ Berhasil Ditambahkan!');
+                        $button.removeClass('from-green-600 to-teal-600')
+                               .addClass('from-blue-600 to-blue-700');
+                        
+                        // Show success message
+                        showNotification('Destinasi berhasil ditambahkan ke trip cart!', 'success');
+                        
+                        // Reset button after 2 seconds
+                        setTimeout(function() {
+                            $buttonText.text(originalText);
+                            $button.prop('disabled', false)
+                                   .removeClass('from-blue-600 to-blue-700')
+                                   .addClass('from-green-600 to-teal-600');
+                        }, 2000);
+                    } else {
+                        throw new Error(data.message || 'Terjadi kesalahan');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error:', error);
+                    $buttonText.text(originalText);
+                    $button.prop('disabled', false);
+                    
+                    let errorMessage = 'Gagal menambahkan destinasi';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    showNotification(errorMessage, 'error');
+                }
+            });
+        });
+        
+        // Notification function
+        function showNotification(message, type = 'success') {
+            const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600';
+            const $notification = $('<div></div>')
+                .addClass('fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white font-semibold transform transition-all duration-300 ' + bgColor)
+                .css({
+                    'transform': 'translateY(-100%)',
+                    'opacity': '0'
+                })
+                .text(message);
+            
+            $('body').append($notification);
+            
+            // Animate in
+            setTimeout(function() {
+                $notification.css({
+                    'transform': 'translateY(0)',
+                    'opacity': '1'
+                });
+            }, 10);
+            
+            // Remove after 3 seconds
+            setTimeout(function() {
+                $notification.css({
+                    'transform': 'translateY(-100%)',
+                    'opacity': '0'
+                });
+                setTimeout(function() {
+                    $notification.remove();
+                }, 300);
+            }, 3000);
+        }
+    });
+</script>
 @endsection

@@ -70,4 +70,12 @@ class Tourism extends Model
     {
         return $this->belongsToMany(Facility::class, 'tourism_facility');
     }
+
+    /**
+     * Get the trip cart items for this tourism.
+     */
+    public function tripCart(): HasMany
+    {
+        return $this->hasMany(TripCart::class);
+    }
 }

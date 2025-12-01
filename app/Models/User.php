@@ -43,4 +43,12 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Get the trip cart items for this user.
+     */
+    public function tripCart()
+    {
+        return $this->hasMany(TripCart::class);
+    }
 }
