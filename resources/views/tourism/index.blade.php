@@ -440,16 +440,28 @@
                         </div>
 
                         <!-- Latitude Longitude Input -->
-                        <div class="grid grid-cols-2 gap-2 mb-3">
-                            <div>
-                                <label class="block text-xs text-gray-600 mb-1">Latitude</label>
-                                <input type="text" name="latitude" placeholder="-7.2575"
-                                       class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                        <div class="mb-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-xs text-gray-600">Lokasi Anda</label>
+                                <button type="button" onclick="detectLocation()" class="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 font-semibold transition-colors duration-200">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                    Deteksi Lokasi GPS
+                                </button>
                             </div>
-                            <div>
-                                <label class="block text-xs text-gray-600 mb-1">Longitude</label>
-                                <input type="text" name="longitude" placeholder="112.7521"
-                                       class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Latitude</label>
+                                    <input type="text" id="latitudeInput" name="latitude" placeholder="-7.2575"
+                                           class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Longitude</label>
+                                    <input type="text" id="longitudeInput" name="longitude" placeholder="112.7521"
+                                           class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                                </div>
                             </div>
                         </div>
 
@@ -577,7 +589,8 @@
     </div>
 </div>
 @endif
-
+@endsection
+@section('scripts')
 <script>
     // Auto submit form on filter change
     document.querySelectorAll('select[name="category"], select[name="sort"]').forEach(select => {
@@ -728,6 +741,82 @@
         }
     });
 
+    // Detect GPS Location
+    function detectLocation() {
+        if (!navigator.geolocation) {
+            alert('Geolocation tidak didukung oleh browser Anda.');
+            return;
+        }
+
+        // Show loading state
+        const button = event.target.closest('button');
+        const originalHTML = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = `
+            <svg class="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Mendeteksi...
+        `;
+
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                // Success - populate the input fields
+                const latitude = position.coords.latitude.toFixed(6);
+                const longitude = position.coords.longitude.toFixed(6);
+                
+                document.getElementById('latitudeInput').value = latitude;
+                document.getElementById('longitudeInput').value = longitude;
+
+                // Reset button
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+
+                // Show success message
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'text-xs text-green-600 mt-1 flex items-center';
+                messageDiv.innerHTML = `
+                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    Lokasi berhasil terdeteksi!
+                `;
+                
+                // Insert message and remove after 3 seconds
+                button.parentElement.appendChild(messageDiv);
+                setTimeout(() => messageDiv.remove(), 3000);
+            },
+            function(error) {
+                // Error handling
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+
+                let errorMessage = 'Gagal mendapatkan lokasi. ';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage += 'Izin akses lokasi ditolak. Mohon aktifkan izin lokasi di browser Anda.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage += 'Informasi lokasi tidak tersedia.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage += 'Waktu permintaan lokasi habis.';
+                        break;
+                    default:
+                        errorMessage += 'Terjadi kesalahan yang tidak diketahui.';
+                        break;
+                }
+                alert(errorMessage);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    }
+
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         calculateTotal();
@@ -738,5 +827,4 @@
         @endif
     });
 </script>
-
 @endsection

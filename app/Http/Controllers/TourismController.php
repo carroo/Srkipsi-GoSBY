@@ -96,8 +96,7 @@ class TourismController extends Controller
     }
 
     /**
-     * Calculate distance between two coordinates (Haversine formula).
-     * TODO: Implement actual calculation
+     * Calculate distance between two coordinates using OpenRouteService API.
      *
      * @param float $lat1 User latitude
      * @param float $lon1 User longitude
@@ -107,8 +106,71 @@ class TourismController extends Controller
      */
     private function calculateDistance($lat1, $lon1, $lat2, $lon2)
     {
-        // Dummy return random number for now (1-50 km)
-        return rand(1, 50);
+        try {
+            $apiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjIyMTZlOWViNmQwYjQ1MTRhODE5NDJlNzM2MDFjNTI1IiwiaCI6Im11cm11cjY0In0';
+            
+            // OpenRouteService API endpoint
+            $url = "https://api.openrouteservice.org/v2/directions/driving-car";
+            $url .= "?api_key={$apiKey}";
+            $url .= "&start={$lon1},{$lat1}";  // Note: OpenRouteService uses lon,lat format
+            $url .= "&end={$lon2},{$lat2}";
+            
+            // Make HTTP request
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Accept: application/json'
+            ]);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode === 200 && $response) {
+                $data = json_decode($response, true);
+                
+                // Extract distance from response (in meters)
+                if (isset($data['features'][0]['properties']['segments'][0]['distance'])) {
+                    $distanceMeters = $data['features'][0]['properties']['segments'][0]['distance'];
+                    return round($distanceMeters / 1000, 2); // Convert to kilometers
+                }
+            }
+            
+            // Fallback to Haversine formula if API fails
+            return $this->calculateDistanceHaversine($lat1, $lon1, $lat2, $lon2);
+            
+        } catch (\Exception $e) {
+            // Fallback to Haversine formula on error
+            return $this->calculateDistanceHaversine($lat1, $lon1, $lat2, $lon2);
+        }
+    }
+
+    /**
+     * Calculate distance using Haversine formula as fallback.
+     *
+     * @param float $lat1 User latitude
+     * @param float $lon1 User longitude
+     * @param float $lat2 Tourism latitude
+     * @param float $lon2 Tourism longitude
+     * @return float Distance in kilometers
+     */
+    private function calculateDistanceHaversine($lat1, $lon1, $lat2, $lon2)
+    {
+        $earthRadius = 6371; // Earth's radius in kilometers
+
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+
+        $a = sin($dLat / 2) * sin($dLat / 2) +
+             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+             sin($dLon / 2) * sin($dLon / 2);
+
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+        $distance = $earthRadius * $c;
+
+        return round($distance, 2);
     }
 
     /**
