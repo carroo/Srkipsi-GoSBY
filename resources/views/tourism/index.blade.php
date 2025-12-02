@@ -188,9 +188,9 @@
 
             <div class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 @foreach($tourisms as $index => $tourism)
-                    <a href="{{ route('tourism.show', $tourism->id) }}"
-                       class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition duration-300 transform hover:scale-105 hover:-translate-y-2 group block animate-fade-in-up"
+                    <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition duration-300 transform hover:scale-105 hover:-translate-y-2 group animate-fade-in-up"
                        style="animation-delay: {{ ($index % 12) * 0.05 }}s;">
+                        <a href="{{ route('tourism.show', $tourism->id) }}" class="block">
 
                         <!-- Image -->
                         <div class="relative h-48 bg-gray-200 overflow-hidden">
@@ -291,6 +291,25 @@
                             </div>
                         </div>
                     </a>
+
+                    <!-- Trip Cart Button -->
+                    <div class="px-4 pb-4">
+                        @auth
+                            <button class="add-to-trip-cart w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition duration-300 shadow-md flex items-center justify-center"
+                                    data-tourism-id="{{ $tourism->id }}"
+                                    data-tourism-name="{{ $tourism->name }}">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                <span class="button-text">Tambah ke Trip Cart</span>
+                            </button>
+                        @else
+                            <a href="{{ route('login') }}" class="block w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-semibold py-2 px-4 rounded-lg text-sm text-center transition duration-300 shadow-md">
+                                Login untuk Menambahkan
+                            </a>
+                        @endauth
+                    </div>
+                </div>
                 @endforeach
             </div>
 
@@ -825,6 +844,103 @@
         @if(session('error'))
             openRecommendationModal();
         @endif
+    });
+
+    // Add to Trip Cart functionality
+    $(document).ready(function() {
+        $('.add-to-trip-cart').on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $button = $(this);
+            const tourismId = $button.data('tourism-id');
+            const tourismName = $button.data('tourism-name');
+            const $buttonText = $button.find('.button-text');
+            const originalText = $buttonText.text();
+            
+            // Disable button and show loading
+            $button.prop('disabled', true);
+            $buttonText.text('Menambahkan...');
+            
+            $.ajax({
+                url: '{{ route('trip-cart.add') }}',
+                type: 'POST',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    tourism_id: tourismId
+                },
+                dataType: 'json',
+                success: function(data) {
+                    if (data.success) {
+                        // Success state
+                        $buttonText.text('✓ Berhasil Ditambahkan!');
+                        $button.removeClass('from-green-600 to-teal-600')
+                               .addClass('from-blue-600 to-blue-700');
+                        
+                        // Show success notification
+                        showNotification('Destinasi "' + tourismName + '" berhasil ditambahkan ke trip cart!', 'success');
+                        
+                        // Reset button after 2 seconds
+                        setTimeout(function() {
+                            $buttonText.text(originalText);
+                            $button.prop('disabled', false)
+                                   .removeClass('from-blue-600 to-blue-700')
+                                   .addClass('from-green-600 to-teal-600');
+                        }, 2000);
+                    } else {
+                        throw new Error(data.message || 'Terjadi kesalahan');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error:', error);
+                    $buttonText.text(originalText);
+                    $button.prop('disabled', false);
+                    
+                    let errorMessage = 'Gagal menambahkan destinasi';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    showNotification(errorMessage, 'error');
+                }
+            });
+        });
+        
+        // Notification function
+        function showNotification(message, type = 'success') {
+            const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600';
+            const icon = type === 'success' 
+                ? '<svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>'
+                : '<svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>';
+            
+            const $notification = $('<div></div>')
+                .addClass('fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white font-semibold transform transition-all duration-300 flex items-center ' + bgColor)
+                .css({
+                    'transform': 'translateY(-100%)',
+                    'opacity': '0'
+                })
+                .html(icon + message);
+            
+            $('body').append($notification);
+            
+            // Animate in
+            setTimeout(function() {
+                $notification.css({
+                    'transform': 'translateY(0)',
+                    'opacity': '1'
+                });
+            }, 10);
+            
+            // Remove after 3 seconds
+            setTimeout(function() {
+                $notification.css({
+                    'transform': 'translateY(-100%)',
+                    'opacity': '0'
+                });
+                setTimeout(function() {
+                    $notification.remove();
+                }, 300);
+            }, 3000);
+        }
     });
 </script>
 @endsection
