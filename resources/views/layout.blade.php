@@ -29,50 +29,25 @@
                     </div>
                 </a>
 
-                <!-- Center Navigation -->
-                <div class="hidden md:flex items-center space-x-8">
-                    <a href="#how-it-works" class="text-sm text-gray-600 font-medium hover:text-blue-600 transition duration-300 relative group">
-                        Cara Kerja
-                        <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-linear-to-r from-blue-600 to-indigo-600 group-hover:w-full transition-all duration-300"></span>
-                    </a>
-                    <a href="#features" class="text-sm text-gray-600 font-medium hover:text-blue-600 transition duration-300 relative group">
-                        Fitur
-                        <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-linear-to-r from-blue-600 to-indigo-600 group-hover:w-full transition-all duration-300"></span>
-                    </a>
-                    <a href="#destinations" class="text-sm text-gray-600 font-medium hover:text-blue-600 transition duration-300 relative group">
-                        Destinasi
-                        <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-linear-to-r from-blue-600 to-indigo-600 group-hover:w-full transition-all duration-300"></span>
-                    </a>
-                </div>
-
                 <!-- Right Side - Auth Buttons -->
                 <div class="flex items-center space-x-2 sm:space-x-3">
+                    <!-- Rekomendasikan Button -->
+                    <a href="{{ route('trip-cart.index') }}" class="relative flex items-center space-x-2 px-3 sm:px-4 py-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-600 rounded-lg transition duration-300 group">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                        </svg>
+                        <span class="hidden sm:inline text-sm">Rekomendasikan</span>
+                    </a>
+
+                    <!-- Jadwalkan Button -->
+                    <a href="#" class="hidden sm:flex items-center space-x-2 px-4 py-2 bg-linear-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-purple-500/30 transition duration-300 transform hover:-translate-y-0.5 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Jadwalkan</span>
+                    </a>
+
                     @auth('web')
-                        <!-- Trip Cart Button -->
-                        <a href="{{ route('trip-cart.index') }}" class="relative flex items-center space-x-2 px-3 sm:px-4 py-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-600 rounded-lg transition duration-300 group">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                            </svg>
-                            <span class="hidden sm:inline text-sm">Trip Cart</span>
-                            @php
-                                $cartCount = \App\Models\TripCart::where('user_id', Auth::id())->count();
-                            @endphp
-                            @if($cartCount > 0)
-                                <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg">
-                                    {{ $cartCount > 9 ? '9+' : $cartCount }}
-                                </span>
-                            @endif
-                        </a>
-
-                        <!-- Penjadwalan Button -->
-                        <a href="#" class="hidden sm:flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-purple-500/30 transition duration-300 transform hover:-translate-y-0.5 text-sm">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            <span>Penjadwalan</span>
-                        </a>
-
-                        <!-- User Dropdown -->
                         <div class="relative">
                             <button id="userMenuButton" class="flex items-center space-x-2 px-3 sm:px-4 py-2 text-gray-700 font-medium hover:bg-gray-50 rounded-lg transition duration-300">
                                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -86,18 +61,15 @@
                             <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-100">
                                 <a href="{{ route('trip-cart.index') }}" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 transition duration-200">
                                     <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                                     </svg>
-                                    <span>Trip Cart</span>
-                                    @if($cartCount > 0)
-                                        <span class="ml-auto bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">{{ $cartCount }}</span>
-                                    @endif
+                                    <span>Rekomendasikan</span>
                                 </a>
                                 <a href="#" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 transition duration-200">
                                     <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                     </svg>
-                                    <span>Penjadwalan</span>
+                                    <span>Jadwalkan</span>
                                 </a>
                                 <div class="border-t border-gray-100 my-1"></div>
                                 <a href="#" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 transition duration-200">
@@ -140,45 +112,32 @@
 
             <!-- Mobile Navigation -->
             <div id="mobile-menu" class="hidden md:hidden pb-4 space-y-2 border-t border-gray-100 mt-2">
-                <a href="#how-it-works" class="block px-4 py-3 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg font-medium transition duration-300">
-                    Cara Kerja
+                <!-- Rekomendasikan Button -->
+                <a href="{{ route('trip-cart.index') }}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-blue-50 rounded-lg font-medium transition duration-300">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                    </svg>
+                    <span>Rekomendasikan</span>
                 </a>
-                <a href="#features" class="block px-4 py-3 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg font-medium transition duration-300">
-                    Fitur
+
+                <!-- Jadwalkan Button -->
+                <a href="#" class="flex items-center px-4 py-3 text-white bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-lg font-semibold transition duration-300">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <span>Jadwalkan</span>
                 </a>
-                <a href="#destinations" class="block px-4 py-3 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg font-medium transition duration-300">
-                    Destinasi
-                </a>
-                
+
                 @auth('web')
                     <!-- Authenticated User Menu -->
                     <div class="pt-2 border-t border-gray-100 space-y-2">
-                        <a href="{{ route('trip-cart.index') }}" class="flex items-center justify-between px-4 py-3 text-gray-700 hover:bg-blue-50 rounded-lg font-medium transition duration-300">
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                                </svg>
-                                <span>Trip Cart</span>
-                            </div>
-                            @if($cartCount > 0)
-                                <span class="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">{{ $cartCount }}</span>
-                            @endif
-                        </a>
-                        
-                        <a href="#" class="flex items-center px-4 py-3 text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-lg font-semibold transition duration-300">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            <span>Penjadwalan</span>
-                        </a>
-                        
                         <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg font-medium transition duration-300">
                             <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                             </svg>
                             <span>Profil</span>
                         </a>
-                        
+
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit" class="w-full flex items-center px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg font-medium transition duration-300">
@@ -195,7 +154,7 @@
                         <a href="{{ route('login') }}" class="block w-full px-4 py-2.5 text-gray-700 font-medium hover:bg-gray-100 rounded-lg transition duration-300 text-center">
                             Masuk
                         </a>
-                        <a href="{{ route('register') }}" class="block w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold py-2.5 text-center hover:shadow-lg transition duration-300">
+                        <a href="{{ route('register') }}" class="block w-full bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold py-2.5 text-center hover:shadow-lg transition duration-300">
                             Daftar Sekarang
                         </a>
                     </div>
@@ -217,17 +176,17 @@
                 document.getElementById('mobile-menu').classList.add('hidden');
             });
         });
-        
+
         // User dropdown toggle
         const userMenuButton = document.getElementById('userMenuButton');
         const userDropdown = document.getElementById('userDropdown');
-        
+
         if (userMenuButton && userDropdown) {
             userMenuButton.addEventListener('click', function(e) {
                 e.stopPropagation();
                 userDropdown.classList.toggle('hidden');
             });
-            
+
             // Close dropdown when clicking outside
             document.addEventListener('click', function(e) {
                 if (!userMenuButton.contains(e.target) && !userDropdown.contains(e.target)) {
@@ -235,11 +194,6 @@
                 }
             });
         }
-    </script>
-            link.addEventListener('click', function() {
-                document.getElementById('mobile-menu').classList.add('hidden');
-            });
-        });
     </script>
 
     <!-- Main Content -->
@@ -262,9 +216,8 @@
                 <div>
                     <h3 class="text-white font-bold mb-4">Navigasi</h3>
                     <ul class="text-sm text-gray-400 space-y-2">
-                        <li><a href="#how-it-works" class="hover:text-white transition">Cara Kerja</a></li>
-                        <li><a href="#features" class="hover:text-white transition">Fitur</a></li>
-                        <li><a href="#destinations" class="hover:text-white transition">Destinasi</a></li>
+                        <li><a href="{{ route('trip-cart.index') }}" class="hover:text-white transition">Rekomendasikan</a></li>
+                        <li><a href="#" class="hover:text-white transition">Jadwalkan</a></li>
                     </ul>
                 </div>
                 <div>

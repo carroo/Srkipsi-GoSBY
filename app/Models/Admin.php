@@ -30,6 +30,5 @@ class Admin extends Authenticatable
     protected $casts = [
         'is_active' => 'boolean',
         'last_login' => 'datetime',
-        'password' => 'hashed',
     ];
 }

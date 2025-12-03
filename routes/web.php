@@ -6,6 +6,10 @@ use App\Http\Controllers\TourismController;
 use App\Http\Controllers\TripCartController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\TourismController as AdminTourismController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\FacilityController;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 
@@ -32,4 +36,32 @@ Route::middleware('auth:web')->group(function () {
     Route::post('/trip-cart/add', [TripCartController::class, 'add'])->name('trip-cart.add');
     Route::delete('/trip-cart/remove/{id}', [TripCartController::class, 'remove'])->name('trip-cart.remove');
     Route::get('/trip-cart', [TripCartController::class, 'index'])->name('trip-cart.index');
+});
+
+// Admin Routes (Protected)
+Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Tourism Management
+    Route::get('/tourism', [AdminTourismController::class, 'index'])->name('tourism.index');
+
+    // Categories Management
+    Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
+    Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+    Route::get('/categories/{id}', [CategoryController::class, 'show'])->name('categories.show');
+    Route::put('/categories/{id}', [CategoryController::class, 'update'])->name('categories.update');
+    Route::delete('/categories/{id}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+
+    // Facilities Management
+    Route::get('/facilities', [FacilityController::class, 'index'])->name('facilities.index');
+    Route::post('/facilities', [FacilityController::class, 'store'])->name('facilities.store');
+    Route::get('/facilities/{id}', [FacilityController::class, 'show'])->name('facilities.show');
+    Route::put('/facilities/{id}', [FacilityController::class, 'update'])->name('facilities.update');
+    Route::delete('/facilities/{id}', [FacilityController::class, 'destroy'])->name('facilities.destroy');
+
+    // Placeholder routes for sidebar menu (will be implemented later)
+    Route::get('/users', function() { return 'Users Management'; })->name('users.index');
+    Route::get('/bookings', function() { return 'Bookings Management'; })->name('bookings.index');
+    Route::get('/settings', function() { return 'Settings'; })->name('settings');
+    Route::get('/profile', function() { return 'Profile'; })->name('profile');
 });

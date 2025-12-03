@@ -59,16 +59,9 @@ class LoginController extends Controller
         ]);
 
         $credentials = $request->only('email', 'password');
-        $remember = $request->filled('remember');
 
-        if (Auth::guard('admin')->attempt($credentials, $remember)) {
+        if (Auth::guard('admin')->attempt($credentials)) {
             $request->session()->regenerate();
-            
-            // Update last login
-            Auth::guard('admin')->user()->update([
-                'last_login' => now()
-            ]);
-            
             return redirect()->intended('/admin/dashboard');
         }
 
@@ -85,7 +78,7 @@ class LoginController extends Controller
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
+
         return redirect('/');
     }
 
@@ -97,7 +90,7 @@ class LoginController extends Controller
         Auth::guard('admin')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
+
         return redirect('/admin/login');
     }
 }
