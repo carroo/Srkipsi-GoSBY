@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('day'); // Monday, Tuesday, etc or 'daily'
             $table->time('open_time')->nullable();
             $table->time('close_time')->nullable();
-            $table->boolean('is_open')->default(true);
             $table->timestamps();
         });
     }

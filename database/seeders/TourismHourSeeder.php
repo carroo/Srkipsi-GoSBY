@@ -21,7 +21,6 @@ class TourismHourSeeder extends Seeder
                 'day' => $day,
                 'open_time' => '08:00',
                 'close_time' => '16:00',
-                'is_open' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -34,7 +33,6 @@ class TourismHourSeeder extends Seeder
                 'day' => $day,
                 'open_time' => '08:00',
                 'close_time' => '16:00',
-                'is_open' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -47,7 +45,6 @@ class TourismHourSeeder extends Seeder
                 'day' => $day,
                 'open_time' => '09:00',
                 'close_time' => '16:00',
-                'is_open' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -60,7 +57,6 @@ class TourismHourSeeder extends Seeder
                 'day' => $day,
                 'open_time' => '08:00',
                 'close_time' => '16:00',
-                'is_open' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -73,7 +69,6 @@ class TourismHourSeeder extends Seeder
                 'day' => $day,
                 'open_time' => '00:00',
                 'close_time' => '23:59',
-                'is_open' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -86,7 +81,6 @@ class TourismHourSeeder extends Seeder
                 'day' => $day,
                 'open_time' => '09:00',
                 'close_time' => '17:00',
-                'is_open' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -99,7 +93,6 @@ class TourismHourSeeder extends Seeder
                 'day' => $day,
                 'open_time' => '06:00',
                 'close_time' => '18:00',
-                'is_open' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -112,7 +105,6 @@ class TourismHourSeeder extends Seeder
                 'day' => $day,
                 'open_time' => '00:00',
                 'close_time' => '23:59',
-                'is_open' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -125,7 +117,6 @@ class TourismHourSeeder extends Seeder
                 'day' => $day,
                 'open_time' => '06:00',
                 'close_time' => '18:00',
-                'is_open' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -138,7 +129,6 @@ class TourismHourSeeder extends Seeder
                 'day' => $day,
                 'open_time' => '08:00',
                 'close_time' => '15:00',
-                'is_open' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -151,7 +141,6 @@ class TourismHourSeeder extends Seeder
                 'day' => $day,
                 'open_time' => '10:00',
                 'close_time' => '22:00',
-                'is_open' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -164,7 +153,6 @@ class TourismHourSeeder extends Seeder
                 'day' => $day,
                 'open_time' => '10:00',
                 'close_time' => '21:00',
-                'is_open' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -177,7 +165,6 @@ class TourismHourSeeder extends Seeder
                 'day' => $day,
                 'open_time' => '10:00',
                 'close_time' => '22:00',
-                'is_open' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

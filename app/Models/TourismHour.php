@@ -17,11 +17,9 @@ class TourismHour extends Model
         'day',
         'open_time',
         'close_time',
-        'is_open',
     ];
 
     protected $casts = [
-        'is_open' => 'boolean',
         'open_time' => 'datetime:H:i',
         'close_time' => 'datetime:H:i',
     ];

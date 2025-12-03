@@ -44,6 +44,10 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
 
     // Tourism Management
     Route::get('/tourism', [AdminTourismController::class, 'index'])->name('tourism.index');
+    Route::post('/tourism', [AdminTourismController::class, 'store'])->name('tourism.store');
+    Route::get('/tourism/{id}', [AdminTourismController::class, 'show'])->name('tourism.show');
+    Route::put('/tourism/{id}', [AdminTourismController::class, 'update'])->name('tourism.update');
+    Route::delete('/tourism/{id}', [AdminTourismController::class, 'destroy'])->name('tourism.destroy');
 
     // Categories Management
     Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
