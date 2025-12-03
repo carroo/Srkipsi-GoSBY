@@ -27,9 +27,6 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-    <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
     <style>
         * {
             font-family: 'Inter', sans-serif;
@@ -103,13 +100,13 @@
 
     @stack('styles')
 </head>
-<body class="bg-gray-50" x-data="{ sidebarOpen: true }">
+<body class="bg-gray-50">
     <div class="min-h-screen flex">
         <!-- Sidebar -->
         @include('admin.partials.sidebar')
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col transition-all duration-300" :class="sidebarOpen ? 'ml-0' : '-ml-64'">
+        <div id="mainContent" class="flex-1 flex flex-col transition-all duration-300">
             <!-- Header -->
             @include('admin.partials.header')
 
@@ -161,6 +158,63 @@
             }
         });
 
+        // Sidebar toggle functionality
+        let sidebarOpen = false; // Default closed on mobile
+        
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            sidebarOpen = !sidebarOpen;
+            
+            if (sidebarOpen) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        };
+
+        // Toggle notifications dropdown
+        window.toggleNotifications = function() {
+            const dropdown = document.getElementById('notificationsDropdown');
+            const profileDropdown = document.getElementById('profileDropdown');
+            
+            // Close profile dropdown if open
+            profileDropdown.classList.add('hidden');
+            
+            // Toggle notifications dropdown
+            dropdown.classList.toggle('hidden');
+        };
+
+        // Toggle profile menu dropdown
+        window.toggleProfileMenu = function() {
+            const dropdown = document.getElementById('profileDropdown');
+            const notificationsDropdown = document.getElementById('notificationsDropdown');
+            
+            // Close notifications dropdown if open
+            notificationsDropdown.classList.add('hidden');
+            
+            // Toggle profile dropdown
+            dropdown.classList.toggle('hidden');
+        };
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            const notificationsBtn = event.target.closest('button[onclick="toggleNotifications()"]');
+            const profileBtn = event.target.closest('button[onclick="toggleProfileMenu()"]');
+            const notificationsDropdown = document.getElementById('notificationsDropdown');
+            const profileDropdown = document.getElementById('profileDropdown');
+            
+            if (!notificationsBtn && notificationsDropdown && !notificationsDropdown.contains(event.target)) {
+                notificationsDropdown.classList.add('hidden');
+            }
+            
+            if (!profileBtn && profileDropdown && !profileDropdown.contains(event.target)) {
+                profileDropdown.classList.add('hidden');
+            }
+        });
 
         // SweetAlert2 Toast configuration
         const Toast = Swal.mixin({

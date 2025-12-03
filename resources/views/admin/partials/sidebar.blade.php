@@ -1,5 +1,5 @@
-<aside x-show="sidebarOpen"
-       class="w-64 bg-white border-r border-gray-200 min-h-screen fixed lg:relative z-40 shadow-lg lg:shadow-none transition-all duration-300">
+<aside id="sidebar"
+       class="w-64 bg-white border-r border-gray-200 min-h-screen fixed lg:relative z-40 shadow-lg lg:shadow-none transition-all duration-300 -translate-x-full lg:translate-x-0">
     <!-- Logo -->
     <div class="h-16 flex items-center justify-center border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600">
         <div class="flex items-center space-x-2">
@@ -55,22 +55,7 @@
             <span class="ml-3 font-medium">Pengguna</span>
         </a>
 
-        <!-- Bookings -->
-        <a href="{{ route('admin.bookings.index') }}"
-           class="sidebar-link flex items-center px-4 py-3 mb-1 rounded-lg {{ request()->routeIs('admin.bookings.*') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50' }}">
-            <i class="fas fa-ticket-alt w-5 {{ request()->routeIs('admin.bookings.*') ? 'text-blue-600' : 'text-gray-400' }}"></i>
-            <span class="ml-3 font-medium">Pemesanan</span>
-        </a>
 
-        <!-- Divider -->
-        <div class="my-4 border-t border-gray-200"></div>
-
-        <!-- Settings -->
-        <a href="{{ route('admin.settings') }}"
-           class="sidebar-link flex items-center px-4 py-3 mb-1 rounded-lg {{ request()->routeIs('admin.settings') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50' }}">
-            <i class="fas fa-cog w-5 {{ request()->routeIs('admin.settings') ? 'text-blue-600' : 'text-gray-400' }}"></i>
-            <span class="ml-3 font-medium">Pengaturan</span>
-        </a>
     </nav>
 
     <!-- User Info at Bottom -->
@@ -88,12 +73,7 @@
 </aside>
 
 <!-- Mobile overlay -->
-<div x-show="sidebarOpen"
-     @click="sidebarOpen = false"
-     x-transition:enter="transition-opacity ease-linear duration-300"
-     x-transition:enter-start="opacity-0"
-     x-transition:enter-end="opacity-100"
-     x-transition:leave="transition-opacity ease-linear duration-300"
-     x-transition:leave-start="opacity-100"
-     x-transition:leave-end="opacity-0"
-     class="fixed inset-0 bg-gray-900 bg-opacity-50 z-30 lg:hidden"></div>
+<div id="sidebarOverlay"
+     onclick="toggleSidebar()"
+     class="fixed inset-0 bg-gray-900 bg-opacity-50 z-30 lg:hidden hidden">
+</div>
