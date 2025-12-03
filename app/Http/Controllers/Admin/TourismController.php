@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Http;
 use Yajra\DataTables\Facades\DataTables;
 
 class TourismController extends Controller
@@ -40,7 +41,7 @@ class TourismController extends Controller
                 })
                 ->addColumn('facilities', function($row) {
                     if ($row->facilities->isEmpty()) {
-                        return '<span class="text-gray-400 text-sm">-</span>';
+                        return '<span class="inline-block px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold mr-1 mb-1">0</span>';
                     }
                     $count = $row->facilities->count();
                     $badges = '<span class="inline-block px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold mr-1 mb-1">' . $count . '</span>';
@@ -59,7 +60,7 @@ class TourismController extends Controller
                 })
                 ->addColumn('price_range', function($row) {
                     if ($row->prices->isEmpty()) {
-                        return '<span class="text-gray-400 text-sm">-</span>';
+                        return '<span class="inline-block px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">Tidak ada informasi / Gratis</span>';
                     }
                     $minPrice = $row->prices->min('price');
                     $maxPrice = $row->prices->max('price');
@@ -93,7 +94,7 @@ class TourismController extends Controller
                 })
                 ->editColumn('rating', function($row) {
                     if (!$row->rating) {
-                        return '<span class="text-gray-400 text-sm">-</span>';
+                       $row->rating = 0;
                     }
                     $stars = '';
                     $fullStars = floor($row->rating);
@@ -439,4 +440,242 @@ class TourismController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Import tourism data from external API with Server-Sent Events (SSE) for real-time progress
+     */
+    public function importFromApi(Request $request)
+    {
+        // Set headers for Server-Sent Events (SSE)
+        return response()->stream(function () {
+            // Disable output buffering
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            // Set SSE headers
+            header('Content-Type: text/event-stream');
+            header('Cache-Control: no-cache');
+            header('Connection: keep-alive');
+            header('X-Accel-Buffering: no'); // Disable nginx buffering
+            
+            $this->sendSSE('info', 'Memulai proses import...', 0);
+            
+            try {
+                // Get data from API
+                $apiUrl = 'https://tourism.surabaya.go.id/api/travel-kit/map?type=destination&radius=1000&latitude=-7.2841&longitude=112.7541';
+                
+                $this->sendSSE('info', 'Mengambil data dari API eksternal...', 5);
+                
+                $response = Http::timeout(30)->get($apiUrl);
+
+                if (!$response->successful()) {
+                    $this->sendSSE('error', 'Gagal mengambil data dari API: ' . $response->status(), 0);
+                    $this->sendSSE('done', 'Import gagal', 100);
+                    return;
+                }
+
+                $apiData = $response->json();
+
+                if (!isset($apiData['data']) || !is_array($apiData['data'])) {
+                    $this->sendSSE('error', 'Format data API tidak valid', 0);
+                    $this->sendSSE('done', 'Import gagal', 100);
+                    return;
+                }
+
+                $totalData = count($apiData['data']);
+                $this->sendSSE('info', "Data berhasil diambil. Total: {$totalData} wisata", 10);
+
+                $imported = 0;
+                $updated = 0;
+                $skipped = 0;
+                $errors = [];
+
+                foreach ($apiData['data'] as $index => $apiTourism) {
+                    $currentProgress = 10 + (($index + 1) / $totalData * 85);
+                    
+                    try {
+                        // Get external ID
+                        $externalId = $apiTourism['id'] ?? null;
+                        
+                        if (!$externalId) {
+                            $skipped++;
+                            $this->sendSSE('warning', "Item #" . ($index + 1) . ": Tidak ada ID eksternal, dilewati", $currentProgress);
+                            continue;
+                        }
+
+                        // Get tourism name from language data
+                        $tourismName = null;
+                        if (!empty($apiTourism['touristDestinationLanguages'])) {
+                            $tourismName = $apiTourism['touristDestinationLanguages'][0]['name'] ?? null;
+                        }
+
+                        if (!$tourismName) {
+                            $skipped++;
+                            $this->sendSSE('warning', "Item #" . ($index + 1) . ": Tidak ada nama, dilewati", $currentProgress);
+                            continue;
+                        }
+
+                        // Get description (prefer Indonesian language)
+                        $description = null;
+                        if (!empty($apiTourism['touristDestinationLanguages'])) {
+                            $description = $apiTourism['touristDestinationLanguages'][0]['description'] ?? null;
+                        }
+
+                        // Check if tourism already exists by external_id
+                        $tourism = Tourism::where('external_id', $externalId)->first();
+                        
+                        $isUpdate = (bool)$tourism;
+                        
+                        DB::beginTransaction();
+
+                        // Create or update tourism record
+                        $tourismData = [
+                            'name' => $tourismName,
+                            'description' => $description,
+                            'location' => $apiTourism['address'] ?? null,
+                            'latitude' => $apiTourism['latitude'] ?? null,
+                            'longitude' => $apiTourism['longitude'] ?? null,
+                            'phone' => $apiTourism['contact'] ?? null,
+                            'website' => $apiTourism['websiteLink'] ?? null,
+                            'external_id' => $externalId,
+                            'external_source' => 'tourism.surabaya.go.id',
+                        ];
+
+                        if ($isUpdate) {
+                            // Update existing record
+                            $tourism->update($tourismData);
+                            $this->sendSSE('success', "Memperbarui: {$tourismName}", $currentProgress);
+                            
+                            // Clear existing relations for update
+                            $tourism->categories()->detach();
+                            $tourism->prices()->delete();
+                            
+                            // Delete old images if updating
+                            foreach ($tourism->files as $file) {
+                                Storage::disk('public')->delete($file->file_path);
+                                $file->delete();
+                            }
+                        } else {
+                            // Create new record
+                            $tourism = Tourism::create($tourismData);
+                            $this->sendSSE('success', "Menambahkan: {$tourismName}", $currentProgress);
+                        }
+
+                        // Import categories
+                        if (!empty($apiTourism['tourismCategory'])) {
+                            $categoryIds = [];
+                            foreach ($apiTourism['tourismCategory'] as $apiCategory) {
+                                $category = Category::firstOrCreate(
+                                    ['name' => $apiCategory['name']],
+                                    ['is_active' => true]
+                                );
+                                $categoryIds[] = $category->id;
+                            }
+                            if (!empty($categoryIds)) {
+                                $tourism->categories()->attach($categoryIds);
+                            }
+                        }
+
+                        // Import prices
+                        if (!empty($apiTourism['touristDestinationTicketPrices'])) {
+                            foreach ($apiTourism['touristDestinationTicketPrices'] as $apiPrice) {
+                                $tourism->prices()->create([
+                                    'type' => $apiPrice['name'] ?? 'Umum',
+                                    'price' => $apiPrice['price'] ?? 0,
+                                ]);
+                            }
+                        }
+
+                        // Import images
+                        if (!empty($apiTourism['touristDestinationFiles'])) {
+                            foreach ($apiTourism['touristDestinationFiles'] as $apiFile) {
+                                if (!empty($apiFile['link'])) {
+                                    try {
+                                        $imageResponse = Http::timeout(15)->get($apiFile['link']);
+                                        
+                                        if ($imageResponse->successful()) {
+                                            $imageContent = $imageResponse->body();
+                                            $extension = $apiFile['ext'] ?? 'jpg';
+                                            $fileName = 'imported_' . time() . '_' . uniqid() . '.' . $extension;
+                                            $path = 'tourism/' . $fileName;
+                                            
+                                            Storage::disk('public')->put($path, $imageContent);
+                                            
+                                            $tourism->files()->create([
+                                                'file_path' => $path,
+                                                'file_type' => 'image/' . $extension,
+                                                'original_name' => $apiFile['name'] ?? $fileName,
+                                            ]);
+                                        }
+                                    } catch (\Exception $e) {
+                                        // Skip if image download fails
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+
+                        DB::commit();
+                        
+                        if ($isUpdate) {
+                            $updated++;
+                        } else {
+                            $imported++;
+                        }
+
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+                        $errors[] = [
+                            'name' => $tourismName ?? 'Unknown',
+                            'error' => $e->getMessage()
+                        ];
+                        $this->sendSSE('error', "Gagal: " . ($tourismName ?? 'Unknown') . " - " . $e->getMessage(), $currentProgress);
+                    }
+                }
+
+                // Send final summary
+                $this->sendSSE('info', "Import selesai!", 95);
+                $this->sendSSE('summary', json_encode([
+                    'imported' => $imported,
+                    'updated' => $updated,
+                    'skipped' => $skipped,
+                    'total_processed' => $totalData,
+                    'errors_count' => count($errors),
+                    'errors' => $errors
+                ]), 100);
+                
+                $this->sendSSE('done', 'Import berhasil diselesaikan', 100);
+
+            } catch (\Exception $e) {
+                $this->sendSSE('error', 'Gagal mengimport data: ' . $e->getMessage(), 0);
+                $this->sendSSE('done', 'Import gagal', 100);
+            }
+        }, 200, [
+            'Cache-Control' => 'no-cache',
+            'Content-Type' => 'text/event-stream',
+            'X-Accel-Buffering' => 'no',
+        ]);
+    }
+
+    /**
+     * Send Server-Sent Event
+     */
+    private function sendSSE($type, $message, $progress)
+    {
+        $data = [
+            'type' => $type,
+            'message' => $message,
+            'progress' => round($progress, 2),
+            'timestamp' => now()->format('Y-m-d H:i:s')
+        ];
+        
+        echo "data: " . json_encode($data) . "\n\n";
+        
+        if (ob_get_level()) {
+            ob_flush();
+        }
+        flush();
+    }
 }
+

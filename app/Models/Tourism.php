@@ -23,6 +23,8 @@ class Tourism extends Model
         'email',
         'website',
         'rating',
+        'external_id',
+        'external_source',
     ];
 
     protected $casts = [

@@ -10,10 +10,16 @@
             <h1 class="text-2xl font-bold text-gray-900">Kelola Wisata</h1>
             <p class="text-gray-600 mt-1">Manajemen data destinasi wisata</p>
         </div>
-        <button onclick="createTourism()" class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-sm transition-all duration-200">
-            <i class="fas fa-plus mr-2"></i>
-            Tambah Wisata
-        </button>
+        <div class="flex gap-3">
+            <button onclick="openImportModal()" class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium rounded-lg shadow-sm transition-all duration-200">
+                <i class="fas fa-download mr-2"></i>
+                Import dari API
+            </button>
+            <button onclick="createTourism()" class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-sm transition-all duration-200">
+                <i class="fas fa-plus mr-2"></i>
+                Tambah Wisata
+            </button>
+        </div>
     </div>
 
     <!-- Table Card -->
@@ -326,6 +332,70 @@
             <!-- Modal Body -->
             <div id="viewContent" class="p-6">
                 <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Import -->
+<div id="importModal" class="hidden fixed inset-0 bg-black/30 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 w-full max-w-3xl">
+        <div class="relative bg-white rounded-xl shadow-2xl">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                <h3 class="text-xl font-semibold text-gray-900">
+                    <i class="fas fa-download text-green-600 mr-2"></i>
+                    Import Data Wisata dari API
+                </h3>
+                <button id="closeImportBtn" onclick="closeImportModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 space-y-4">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p class="text-sm text-blue-800">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Import ini akan mengambil data wisata dari <strong>tourism.surabaya.go.id</strong> dan menyimpannya ke dalam sistem.
+                        Data yang sudah ada akan <strong>diperbarui</strong>, data baru akan <strong>ditambahkan</strong>.
+                    </p>
+                </div>
+
+                <!-- Progress Bar -->
+                <div id="importProgress" class="hidden space-y-3">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="font-medium text-gray-700">Progress Import</span>
+                        <span id="importProgressText" class="font-semibold text-blue-600">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                        <div id="importProgressBar" class="bg-gradient-to-r from-green-500 to-blue-500 h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Log Container -->
+                <div class="border border-gray-200 rounded-lg">
+                    <div class="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                        <h4 class="font-semibold text-sm text-gray-700">
+                            <i class="fas fa-list-ul mr-2"></i>
+                            Log Aktivitas
+                        </h4>
+                    </div>
+                    <div id="importLog" class="p-4 h-64 overflow-y-auto bg-white text-sm font-mono">
+                        <p class="text-gray-400 text-center py-8">Belum ada log. Klik tombol "Mulai Import" untuk memulai.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex justify-end gap-3 p-6 border-t border-gray-200">
+                <button type="button" id="closeImportBtn2" onclick="closeImportModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors">
+                    Tutup
+                </button>
+                <button type="button" id="startImportBtn" onclick="startImport()" class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium rounded-lg transition-all duration-200">
+                    <i class="fas fa-play mr-2"></i>
+                    Mulai Import
+                </button>
             </div>
         </div>
     </div>
@@ -798,6 +868,132 @@ function closeModal() {
 // Close view modal
 function closeViewModal() {
     $('#viewModal').addClass('hidden');
+}
+
+// Open import modal
+function openImportModal() {
+    $('#importModal').removeClass('hidden');
+    $('#importProgress').addClass('hidden');
+    $('#importProgressBar').css('width', '0%');
+    $('#importProgressText').text('0%');
+    $('#importLog').empty();
+    $('#startImportBtn').prop('disabled', false);
+    $('#closeImportBtn').prop('disabled', false);
+}
+
+// Close import modal
+function closeImportModal() {
+    $('#importModal').addClass('hidden');
+}
+
+// Start import from API
+function startImport() {
+    $('#importProgress').removeClass('hidden');
+    $('#startImportBtn').prop('disabled', true);
+    $('#closeImportBtn').prop('disabled', true);
+    $('#importLog').empty();
+    
+    // Create EventSource for SSE
+    const eventSource = new EventSource('{{ route("admin.tourism.import-api") }}');
+    
+    eventSource.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+            
+            // Update progress bar
+            $('#importProgressBar').css('width', data.progress + '%');
+            $('#importProgressText').text(Math.round(data.progress) + '%');
+            
+            // Add log entry
+            let logClass = 'text-gray-700';
+            let icon = 'fa-info-circle';
+            
+            if (data.type === 'error') {
+                logClass = 'text-red-600';
+                icon = 'fa-times-circle';
+            } else if (data.type === 'success') {
+                logClass = 'text-green-600';
+                icon = 'fa-check-circle';
+            } else if (data.type === 'warning') {
+                logClass = 'text-yellow-600';
+                icon = 'fa-exclamation-circle';
+            } else if (data.type === 'summary') {
+                const summary = JSON.parse(data.message);
+                const summaryHtml = `
+                    <div class="border-t pt-3 mt-3">
+                        <h4 class="font-semibold text-gray-900 mb-2">Ringkasan Import:</h4>
+                        <ul class="space-y-1 text-sm">
+                            <li><i class="fas fa-plus-circle text-green-600"></i> Ditambahkan: <strong>${summary.imported}</strong></li>
+                            <li><i class="fas fa-sync-alt text-blue-600"></i> Diperbarui: <strong>${summary.updated}</strong></li>
+                            <li><i class="fas fa-ban text-yellow-600"></i> Dilewati: <strong>${summary.skipped}</strong></li>
+                            <li><i class="fas fa-database text-gray-600"></i> Total Diproses: <strong>${summary.total_processed}</strong></li>
+                            <li><i class="fas fa-exclamation-triangle text-red-600"></i> Error: <strong>${summary.errors_count}</strong></li>
+                        </ul>
+                        ${summary.errors_count > 0 ? `
+                            <details class="mt-2">
+                                <summary class="cursor-pointer text-red-600 hover:text-red-700">Lihat Error Detail</summary>
+                                <ul class="mt-2 space-y-1 text-xs">
+                                    ${summary.errors.map(e => `<li>• ${e.name}: ${e.error}</li>`).join('')}
+                                </ul>
+                            </details>
+                        ` : ''}
+                    </div>
+                `;
+                $('#importLog').append(summaryHtml);
+                return;
+            }
+            
+            if (data.type !== 'summary') {
+                const logEntry = `
+                    <div class="${logClass} text-sm py-1">
+                        <i class="fas ${icon} mr-2"></i>
+                        <span class="text-xs text-gray-500">${data.timestamp}</span> - ${data.message}
+                    </div>
+                `;
+                $('#importLog').append(logEntry);
+            }
+            
+            // Auto scroll to bottom
+            const logContainer = document.getElementById('importLog');
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            // Check if done
+            if (data.type === 'done') {
+                eventSource.close();
+                $('#startImportBtn').prop('disabled', false);
+                $('#closeImportBtn').prop('disabled', false);
+                
+                // Show success notification
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Import Selesai!',
+                    text: data.message,
+                    confirmButtonColor: '#3b82f6'
+                });
+                
+                // Reload table
+                $('#tourismTable').DataTable().ajax.reload();
+            }
+            
+        } catch (error) {
+            console.error('Error parsing SSE data:', error);
+        }
+    };
+    
+    eventSource.onerror = function(error) {
+        console.error('EventSource error:', error);
+        eventSource.close();
+        
+        $('#startImportBtn').prop('disabled', false);
+        $('#closeImportBtn').prop('disabled', false);
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Import Gagal!',
+            text: 'Terjadi kesalahan saat mengimport data. Silakan coba lagi.',
+            confirmButtonColor: '#ef4444'
+        });
+    };
 }
 </script>
 @endpush
