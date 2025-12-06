@@ -24,6 +24,7 @@ class Tourism extends Model
         'website',
         'rating',
         'popularity',
+        'is_ready',
         'external_id',
         'external_source',
     ];

@@ -18,31 +18,62 @@ use Yajra\DataTables\Facades\DataTables;
 
 class TourismController extends Controller
 {
+
+    public $serp_api_key = [
+        'ae4ec8d5ee2513828d44ffeafaf5cbd9ba7222eab529255b3ab91d35d2f9af20',
+        '605e639524e885b0898849bcb3beeb67c65a84aabad6a59ab996e08c39073c94',
+        '84ea53b2c5f93a3d9912f8a5f03b31386bc9d1f7b844c2308d3d0f907b2a1f52',
+        'bb49d2b0a80f0855a1944e4aafe522d77f7f45a16b6d24e1d3cb3883a1df5f10',
+        '012e350d513ff949250314edeed6c7d57e179e697b9897afebea870a471bfa27',
+        '9d658efcce98e58228ad51578e41519dd2863698080534c49888607dc5c0810c',
+        '4484dbef755104dd40ed885cbaae89d73b4af368a8a1be1fc0d1970a3cdb214c',
+        '91ff28564c1e9749d816215478fcf0c4d503811a8f7f0934dcc7683472890d4c',
+    ];
+    public $serp_api_index = 1;
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
 
-        // $serpApiKey = 'ae4ec8d5ee2513828d44ffeafaf5cbd9ba7222eab529255b3ab91d35d2f9af20';
-        //                     $serpApiUrl = 'https://serpapi.com/search';
-                            
-        //                     $serpResponse = Http::timeout(10)->get($serpApiUrl, [
-        //                         'engine' => 'google_maps',
-        //                         'q' => 'OCA Ice Skating Arena Surabaya Surabaya',
-        //                         'type' => 'search',
-        //                         'api_key' => $serpApiKey
-        //                     ]);
-        //                     $data = $serpResponse->json();
-        //                     dd($data);
+        // $serpResponse = Http::timeout(10)->get('https://serpapi.com/search', [
+        //     'engine' => 'google_maps',
+        //     'q' => 'Kebun Binatang Surabaya',
+        //     'type' => 'search',
+        //     'll' => '@-7.2575,112.7521,15z',
+        //     // 'location' => 'Surabaya, Indonesia',
+        //     // 'z' => '14',
+        //     'api_key' => $this->serp_api_key[$this->serp_api_index]
+        // ]);
+
+        // $data = $serpResponse->json();
+        // if ($serpResponse->successful()) {
+        //     $serpData = $serpResponse->json();
+        //     if (!empty($serpData['place_results'])) {
+        //         dump('1');
+        //         $firstResult = $serpData['place_results'];
+        //     } else if (!empty($serpData['places_results'])) {
+        //         dump('2');
+        //         $firstResult = $serpData['places_results'][0] ?? [];
+        //     } else if (!empty($serpData['local_results'])) {
+        //         dump('3');
+        //         $firstResult = $serpData['local_results'][0] ?? [];
+        //     }
+        //     if (isset($firstResult))
+        //         dd($firstResult);
+        //     else dd($serpData);
+
+        // }
+
 
         if ($request->ajax()) {
             $tourism = Tourism::with(['categories', 'prices'])
-                ->select(['id', 'name', 'rating', 'popularity']);
+                ->select(['id', 'name', 'rating', 'popularity', 'is_ready'])->orderBy('is_ready', 'desc');
 
             return DataTables::of($tourism)
                 ->addIndexColumn()
-                ->addColumn('categories', function($row) {
+                ->addColumn('categories', function ($row) {
                     if ($row->categories->isEmpty()) {
                         return '<span class="text-gray-400 text-sm">-</span>';
                     }
@@ -52,48 +83,48 @@ class TourismController extends Controller
                     }
                     return $badges;
                 })
-                ->addColumn('price_range', function($row) {
+                ->addColumn('price_range', function ($row) {
                     if ($row->prices->isEmpty()) {
                         return '<span class="inline-block px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">Tidak ada informasi / Gratis</span>';
                     }
                     $minPrice = $row->prices->min('price');
                     $maxPrice = $row->prices->max('price');
-                    
+
                     // Jika harga 0, tampilkan badge "Gratis"
                     if ($maxPrice == 0) {
                         return '<span class="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">GRATIS</span>';
                     }
-                    
+
                     if ($minPrice == $maxPrice) {
                         return '<span class="text-sm font-medium text-gray-700">Rp ' . number_format($minPrice, 0, ',', '.') . '</span>';
                     }
-                    
+
                     // Jika min price 0 tapi ada harga lain
                     if ($minPrice == 0) {
                         return '<span class="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold mr-1">GRATIS</span><span class="text-sm font-medium text-gray-700"> - Rp ' . number_format($maxPrice, 0, ',', '.') . '</span>';
                     }
-                    
+
                     return '<span class="text-sm font-medium text-gray-700">Rp ' . number_format($minPrice, 0, ',', '.') . ' - Rp ' . number_format($maxPrice, 0, ',', '.') . '</span>';
                 })
-                ->addColumn('action', function($row) {
+                ->addColumn('action', function ($row) {
                     $btn = '<div class="flex space-x-2 justify-center">';
-                    $btn .= '<button onclick="viewTourism('.$row->id.')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs transition-colors duration-200" title="Lihat Detail">';
+                    $btn .= '<button onclick="viewTourism(' . $row->id . ')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs transition-colors duration-200" title="Lihat Detail">';
                     $btn .= '<i class="fas fa-eye"></i></button>';
-                    $btn .= '<button onclick="editTourism('.$row->id.')" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1.5 rounded-lg text-xs transition-colors duration-200" title="Edit">';
+                    $btn .= '<button onclick="editTourism(' . $row->id . ')" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1.5 rounded-lg text-xs transition-colors duration-200" title="Edit">';
                     $btn .= '<i class="fas fa-edit"></i></button>';
-                    $btn .= '<button onclick="deleteTourism('.$row->id.')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs transition-colors duration-200" title="Hapus">';
+                    $btn .= '<button onclick="deleteTourism(' . $row->id . ')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs transition-colors duration-200" title="Hapus">';
                     $btn .= '<i class="fas fa-trash"></i></button>';
                     $btn .= '</div>';
                     return $btn;
                 })
-                ->editColumn('rating', function($row) {
+                ->editColumn('rating', function ($row) {
                     if (!$row->rating) {
-                       $row->rating = 0;
+                        $row->rating = 0;
                     }
                     $stars = '';
                     $fullStars = floor($row->rating);
                     $hasHalfStar = ($row->rating - $fullStars) >= 0.5;
-                    
+
                     for ($i = 1; $i <= 5; $i++) {
                         if ($i <= $fullStars) {
                             $stars .= '<i class="fas fa-star text-yellow-400 text-xs"></i>';
@@ -106,7 +137,7 @@ class TourismController extends Controller
                     $stars .= ' <span class="text-sm font-medium text-gray-700 ml-1">' . number_format($row->rating, 1) . '</span>';
                     return $stars;
                 })
-                ->addColumn('popularity', function($row) {
+                ->editColumn('popularity', function ($row) {
                     return '<span class="text-sm font-medium text-gray-700">' . number_format($row->popularity, 0, ',', '.') . '</span>';
                 })
                 ->rawColumns(['categories', 'price_range', 'rating', 'popularity', 'action'])
@@ -114,7 +145,7 @@ class TourismController extends Controller
         }
 
         $categories = Category::all();
-        
+
         return view('admin.tourism.index', compact('categories'));
     }
 
@@ -143,6 +174,8 @@ class TourismController extends Controller
             'hours.*.day' => 'required_with:hours|string|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
             'hours.*.open_time' => 'required_with:hours|date_format:H:i',
             'hours.*.close_time' => 'required_with:hours|date_format:H:i',
+            'reviews' => 'nullable|array',
+            'reviews.*.snippet' => 'required_with:reviews|string',
             'images' => 'nullable|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
         ], [
@@ -206,6 +239,17 @@ class TourismController extends Controller
                         'open_time' => $hourData['open_time'],
                         'close_time' => $hourData['close_time'],
                     ]);
+                }
+            }
+
+            // Create reviews
+            if ($request->has('reviews')) {
+                foreach ($request->reviews as $reviewData) {
+                    if (!empty($reviewData['snippet'])) {
+                        $tourism->reviews()->create([
+                            'snippet' => $reviewData['snippet'],
+                        ]);
+                    }
                 }
             }
 
@@ -283,6 +327,8 @@ class TourismController extends Controller
             'hours.*.day' => 'required_with:hours|string|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
             'hours.*.open_time' => 'required_with:hours|date_format:H:i',
             'hours.*.close_time' => 'required_with:hours|date_format:H:i',
+            'reviews' => 'nullable|array',
+            'reviews.*.snippet' => 'required_with:reviews|string',
             'images' => 'nullable|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
             'delete_images' => 'nullable|array',
@@ -357,12 +403,24 @@ class TourismController extends Controller
                 }
             }
 
+            // Update reviews - delete all and recreate
+            $tourism->reviews()->delete();
+            if ($request->has('reviews')) {
+                foreach ($request->reviews as $reviewData) {
+                    if (!empty($reviewData['snippet'])) {
+                        $tourism->reviews()->create([
+                            'snippet' => $reviewData['snippet'],
+                        ]);
+                    }
+                }
+            }
+
             // Delete selected images
             if ($request->has('delete_images')) {
                 $filesToDelete = TourismFile::whereIn('id', $request->delete_images)
                     ->where('tourism_id', $id)
                     ->get();
-                
+
                 foreach ($filesToDelete as $file) {
                     // Only delete from storage if it's not an external URL
                     if (!filter_var($file->file_path, FILTER_VALIDATE_URL)) {
@@ -446,21 +504,21 @@ class TourismController extends Controller
             if (ob_get_level()) {
                 ob_end_clean();
             }
-            
+
             // Set SSE headers
             header('Content-Type: text/event-stream');
             header('Cache-Control: no-cache');
             header('Connection: keep-alive');
             header('X-Accel-Buffering: no'); // Disable nginx buffering
-            
+
             $this->sendSSE('info', 'Memulai proses import...', 0);
-            
+
             try {
                 // Get data from API
                 $apiUrl = 'https://tourism.surabaya.go.id/api/travel-kit/map?type=destination&radius=1000&latitude=-7.2841&longitude=112.7541';
-                
+
                 $this->sendSSE('info', 'Mengambil data dari API eksternal...', 5);
-                
+
                 $response = Http::timeout(30)->get($apiUrl);
 
                 if (!$response->successful()) {
@@ -487,11 +545,11 @@ class TourismController extends Controller
 
                 foreach ($apiData['data'] as $index => $apiTourism) {
                     $currentProgress = 10 + (($index + 1) / $totalData * 85);
-                    
+
                     try {
                         // Get external ID
                         $externalId = $apiTourism['id'] ?? null;
-                        
+
                         if (!$externalId) {
                             $skipped++;
                             $this->sendSSE('warning', "Item #" . ($index + 1) . ": Tidak ada ID eksternal, dilewati", $currentProgress);
@@ -518,9 +576,9 @@ class TourismController extends Controller
 
                         // Check if tourism already exists by external_id
                         $tourism = Tourism::where('external_id', $externalId)->first();
-                        
+
                         $isUpdate = (bool)$tourism;
-                        
+
                         // DB::beginTransaction();
 
                         // Get rating and popularity data from SerpAPI
@@ -529,24 +587,24 @@ class TourismController extends Controller
                         $address = null;
                         $serpHours = null;
                         $serpReviews = null;
-                        
+
                         try {
                             $this->sendSSE('info', "Mengambil rating untuk: {$tourismName}", $currentProgress);
-                            
-                            $serpApiKey = 'ae4ec8d5ee2513828d44ffeafaf5cbd9ba7222eab529255b3ab91d35d2f9af20';
+
                             $serpApiUrl = 'https://serpapi.com/search';
-                            
+
                             $serpResponse = Http::timeout(10)->get($serpApiUrl, [
                                 'engine' => 'google_maps',
-                                'q' => $tourismName . ' Surabaya',
+                                'q' => $tourismName,
                                 'type' => 'search',
-                                'api_key' => $serpApiKey
+                                'll' => '@-7.2575,112.7521,15z',
+                                'api_key' => $this->serp_api_key[$this->serp_api_index],
                             ]);
-                            
+
                             if ($serpResponse->successful()) {
                                 $serpData = $serpResponse->json();
-                                
-                                if(!empty($serpData['place_results'])) {
+
+                                if (!empty($serpData['place_results'])) {
                                     // Use place_results 
                                     $firstResult = $serpData['place_results'];
                                     $rating = $firstResult['rating'] ?? null;
@@ -558,21 +616,25 @@ class TourismController extends Controller
                                     if ($rating && $popularity) {
                                         $this->sendSSE('success', "Rating ditemukan: {$rating} ({$popularity} reviews)", $currentProgress);
                                     }
-                                } else if(!empty($serpData['places_results'])) {
+                                } else if (!empty($serpData['places_results'])) {
                                     // Fallback to places_results if local_results is empty
                                     $firstResult = $serpData['places_results'][0] ?? [];
                                     $rating = $firstResult['rating'] ?? null;
                                     $popularity = $firstResult['reviews'] ?? null;
                                     $address = $firstResult['address'] ?? null;
+                                    $serpHours = $firstResult['hours'] ?? null;
+                                    $serpReviews = $firstResult['user_reviews']['summary'] ?? null;
 
                                     if ($rating && $popularity) {
                                         $this->sendSSE('success', "Rating ditemukan: {$rating} ({$popularity} reviews)", $currentProgress);
                                     }
-                                }else if (!empty($serpData['local_results'])) {
+                                } else if (!empty($serpData['local_results'])) {
                                     $firstResult = $serpData['local_results'][0] ?? [];
                                     $rating = $firstResult['rating'] ?? null;
                                     $popularity = $firstResult['reviews'] ?? null;
                                     $address = $firstResult['address'] ?? null;
+                                    $serpHours = $firstResult['operating_hours'] ?? null;
+                                    $serpReviews = $firstResult['user_reviews']['summary'] ?? null;
 
                                     if ($rating && $popularity) {
                                         $this->sendSSE('success', "Rating ditemukan: {$rating} ({$popularity} reviews)", $currentProgress);
@@ -583,14 +645,16 @@ class TourismController extends Controller
                             // If SerpAPI fails, just continue without rating
                             $this->sendSSE('warning', "Gagal mengambil rating: " . $e->getMessage(), $currentProgress);
                         }
-                        
+
+                        $is_ready = true;
                         // Skip if rating not found
                         if (!$rating) {
-                            // $skipped++;
-                            // $this->sendSSE('warning', "{$tourismName}: Rating tidak ditemukan, data dilewati", $currentProgress);
+                            $skipped++;
+                            $this->sendSSE('warning', "{$tourismName}: Rating tidak ditemukan, data dilewati", $currentProgress);
                             // continue;
+                            $is_ready = false;
                         }
-                        
+
                         // Create or update tourism record
                         $tourismData = [
                             'name' => $tourismName,
@@ -604,19 +668,20 @@ class TourismController extends Controller
                             'popularity' => $popularity ?? 0,
                             'external_id' => $externalId,
                             'external_source' => 'tourism.surabaya.go.id',
+                            'is_ready' => $is_ready,
                         ];
 
                         if ($isUpdate) {
                             // Update existing record
                             $tourism->update($tourismData);
                             $this->sendSSE('success', "Memperbarui: {$tourismName}", $currentProgress);
-                            
+
                             // Clear existing relations for update
                             $tourism->categories()->detach();
                             $tourism->prices()->delete();
                             $tourism->hours()->delete();
                             $tourism->reviews()->delete();
-                            
+
                             // Delete old images if updating (only from storage, not external URLs)
                             foreach ($tourism->files as $file) {
                                 // Only delete from storage if it's not an external URL
@@ -668,25 +733,25 @@ class TourismController extends Controller
                                 'saturday' => 'Sabtu',
                                 'sunday' => 'Minggu'
                             ];
-                            
+
                             foreach ($serpHours as $hourData) {
                                 foreach ($hourData as $dayEn => $timeRange) {
                                     $dayId = $dayMapping[strtolower($dayEn)] ?? null;
-                                    
+
                                     if ($dayId && $timeRange !== 'Closed') {
                                         // Parse time range (e.g., "10 AM–10 PM")
                                         $times = explode('–', str_replace([' AM', ' PM', "\u{202F}"], ['', '', ''], $timeRange));
-                                        
+
                                         if (count($times) === 2) {
                                             try {
                                                 // Clean and parse times
                                                 $openTime = trim($times[0]);
                                                 $closeTime = trim($times[1]);
-                                                
+
                                                 // Convert to 24-hour format
                                                 $openHour = (int)$openTime;
                                                 $closeHour = (int)$closeTime;
-                                                
+
                                                 // Check if PM indicator exists in original string
                                                 if (strpos($timeRange, 'PM') !== false) {
                                                     if ($closeHour < 12) {
@@ -696,7 +761,7 @@ class TourismController extends Controller
                                                         $openHour += 12;
                                                     }
                                                 }
-                                                
+
                                                 $tourism->hours()->create([
                                                     'day' => $dayId,
                                                     'open_time' => sprintf('%02d:00', $openHour),
@@ -715,7 +780,7 @@ class TourismController extends Controller
                         // Import reviews from SerpAPI
                         if (!empty($serpReviews) && is_array($serpReviews)) {
                             $this->sendSSE('info', "Menyimpan reviews dari SerpAPI", $currentProgress);
-                            
+
                             foreach ($serpReviews as $review) {
                                 try {
                                     if (!empty($review['snippet'])) {
@@ -749,13 +814,12 @@ class TourismController extends Controller
                         }
 
                         // DB::commit();
-                        
+
                         if ($isUpdate) {
                             $updated++;
                         } else {
                             $imported++;
                         }
-
                     } catch (\Exception $e) {
                         // DB::rollBack();
                         $errors[] = [
@@ -776,9 +840,8 @@ class TourismController extends Controller
                     'errors_count' => count($errors),
                     'errors' => $errors
                 ]), 100);
-                
-                $this->sendSSE('done', 'Import berhasil diselesaikan', 100);
 
+                $this->sendSSE('done', 'Import berhasil diselesaikan', 100);
             } catch (\Exception $e) {
                 $this->sendSSE('error', 'Gagal mengimport data: ' . $e->getMessage(), 0);
                 $this->sendSSE('done', 'Import gagal', 100);
@@ -788,6 +851,278 @@ class TourismController extends Controller
             'Content-Type' => 'text/event-stream',
             'X-Accel-Buffering' => 'no',
         ]);
+    }
+
+    /**
+     * Update SerpAPI data for tourism with is_ready = 0 (Server-Sent Events)
+     */
+    public function updateSerpData(Request $request)
+    {
+        // Set headers for Server-Sent Events (SSE)
+        return response()->stream(function () {
+            // Disable output buffering
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+
+            // Set SSE headers
+            header('Content-Type: text/event-stream');
+            header('Cache-Control: no-cache');
+            header('Connection: keep-alive');
+            header('X-Accel-Buffering: no'); // Disable nginx buffering
+
+            $this->sendSSE('info', 'Memulai proses update SerpAPI...', 0);
+
+            try {
+                // Get tourism data where is_ready = 0
+                $tourismList = Tourism::where('is_ready', 0)->get();
+
+                if ($tourismList->isEmpty()) {
+                    $this->sendSSE('warning', 'Tidak ada data wisata yang perlu diupdate', 0);
+                    $this->sendSSE('done', 'Update selesai', 100);
+                    return;
+                }
+
+                $totalData = $tourismList->count();
+                $this->sendSSE('info', "Ditemukan {$totalData} wisata yang perlu diupdate", 5);
+
+                $updated = 0;
+                $skipped = 0;
+                $errors = [];
+
+                foreach ($tourismList as $index => $tourism) {
+                    $currentProgress = 5 + (($index + 1) / $totalData * 90);
+
+                    try {
+                        $tourismName = $tourism->name;
+                        $this->sendSSE('info', "Memproses: {$tourismName}", $currentProgress);
+
+                        // Get rating and popularity data from SerpAPI
+                        $rating = null;
+                        $popularity = null;
+                        $address = null;
+                        $serpHours = null;
+                        $serpReviews = null;
+
+                        try {
+                            $this->sendSSE('info', "Mengambil data dari SerpAPI untuk: {$tourismName}", $currentProgress);
+
+                            $serpApiUrl = 'https://serpapi.com/search';
+
+                            $serpResponse = Http::timeout(10)->get($serpApiUrl, [
+                                'engine' => 'google_maps',
+                                'q' => $tourismName,
+                                'type' => 'search',
+                                'll' => '@-7.2575,112.7521,15z',
+                                'api_key' => $this->serp_api_key[$this->serp_api_index]
+                            ]);
+
+                            if ($serpResponse->successful()) {
+                                $serpData = $serpResponse->json();
+
+                                if (!empty($serpData['place_results'])) {
+                                    // Use place_results 
+                                    $firstResult = $serpData['place_results'];
+                                    $rating = $firstResult['rating'] ?? null;
+                                    $popularity = $firstResult['reviews'] ?? null;
+                                    $address = $firstResult['address'] ?? null;
+                                    $serpHours = $firstResult['hours'] ?? null;
+                                    $serpReviews = $firstResult['user_reviews']['summary'] ?? null;
+
+                                    if ($rating && $popularity) {
+                                        $this->sendSSE('success', "Data ditemukan - Rating: {$rating}, Reviews: {$popularity}", $currentProgress);
+                                    }
+                                } else if (!empty($serpData['local_results'])) {
+                                    // Fallback to local_results
+                                    $firstResult = $serpData['local_results'][0];
+                                    $rating = $firstResult['rating'] ?? null;
+                                    $popularity = $firstResult['reviews'] ?? null;
+                                    $address = $firstResult['address'] ?? null;
+                                    $serpHours = $firstResult['hours'] ?? null;
+                                    $serpReviews = $firstResult['reviews_from_web'] ?? null;
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            $this->sendSSE('warning', "Gagal mengambil data SerpAPI: " . $e->getMessage(), $currentProgress);
+                        }
+
+                        // Skip if rating not found
+                        if (!$rating) {
+                            $skipped++;
+                            $this->sendSSE('warning', "{$tourismName}: Rating tidak ditemukan, dilewati", $currentProgress);
+                            continue;
+                        }
+
+                        DB::beginTransaction();
+
+                        // Update tourism record
+                        $tourism->update([
+                            'rating' => $rating,
+                            'popularity' => $popularity ?? 0,
+                            'location' => $address ?? $tourism->location,
+                            'is_ready' => 1,
+                        ]);
+
+                        // Update hours from SerpAPI
+                        if (!empty($serpHours) && is_array($serpHours)) {
+                            $this->sendSSE('info', "Memperbarui jam operasional", $currentProgress);
+
+                            // Delete existing hours
+                            $tourism->hours()->delete();
+
+                            $dayMapping = [
+                                'monday' => 'Senin',
+                                'tuesday' => 'Selasa',
+                                'wednesday' => 'Rabu',
+                                'thursday' => 'Kamis',
+                                'friday' => 'Jumat',
+                                'saturday' => 'Sabtu',
+                                'sunday' => 'Minggu'
+                            ];
+
+                            foreach ($serpHours as $hourData) {
+                                foreach ($hourData as $dayEn => $timeRange) {
+                                    $dayId = strtolower($dayEn);
+                                    if (!isset($dayMapping[$dayId])) {
+                                        continue;
+                                    }
+
+                                    $dayName = $dayMapping[$dayId];
+
+                                    // Parse time range (e.g., "9AM-5PM" or "Closed")
+                                    if (strtolower($timeRange) === 'closed' || strtolower($timeRange) === 'tutup') {
+                                        continue;
+                                    }
+
+                                    // Handle 24 hours format
+                                    if (stripos($timeRange, '24 hours') !== false || stripos($timeRange, 'open 24 hours') !== false) {
+                                        $tourism->hours()->create([
+                                            'day' => $dayName,
+                                            'open_time' => '00:00',
+                                            'close_time' => '23:59',
+                                        ]);
+                                        continue;
+                                    }
+
+                                    // Parse normal time range
+                                    $times = preg_split('/[-–—]/', $timeRange);
+                                    if (count($times) === 2) {
+                                        $openTime = $this->parseTime(trim($times[0]));
+                                        $closeTime = $this->parseTime(trim($times[1]));
+
+                                        if ($openTime && $closeTime) {
+                                            $tourism->hours()->create([
+                                                'day' => $dayName,
+                                                'open_time' => $openTime,
+                                                'close_time' => $closeTime,
+                                            ]);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Update reviews from SerpAPI
+                        if (!empty($serpReviews) && is_array($serpReviews)) {
+                            $this->sendSSE('info', "Memperbarui reviews", $currentProgress);
+
+                            // Delete existing reviews
+                            $tourism->reviews()->delete();
+
+                            foreach ($serpReviews as $review) {
+                                try {
+                                    if (!empty($review['snippet'])) {
+                                        $tourism->reviews()->create([
+                                            'snippet' => $review['snippet'],
+                                        ]);
+                                    }
+                                } catch (\Exception $e) {
+                                    // Skip review if error
+                                    continue;
+                                }
+                            }
+                        }
+
+                        DB::commit();
+
+                        $updated++;
+                        $this->sendSSE('success', "Berhasil update: {$tourismName}", $currentProgress);
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+                        $errors[] = [
+                            'name' => $tourism->name ?? 'Unknown',
+                            'error' => $e->getMessage()
+                        ];
+                        $this->sendSSE('error', "Gagal update: " . ($tourism->name ?? 'Unknown') . " - " . $e->getMessage(), $currentProgress);
+                    }
+
+                    // Add delay to avoid rate limiting
+                    usleep(500000); // 0.5 second delay
+                }
+
+                // Send final summary
+                $this->sendSSE('info', "Update selesai!", 95);
+                $this->sendSSE('summary', json_encode([
+                    'updated' => $updated,
+                    'skipped' => $skipped,
+                    'total_processed' => $totalData,
+                    'errors_count' => count($errors),
+                    'errors' => $errors
+                ]), 100);
+
+                $this->sendSSE('done', 'Update berhasil diselesaikan', 100);
+            } catch (\Exception $e) {
+                $this->sendSSE('error', 'Gagal mengupdate data: ' . $e->getMessage(), 0);
+                $this->sendSSE('done', 'Update gagal', 100);
+            }
+        }, 200, [
+            'Cache-Control' => 'no-cache',
+            'Content-Type' => 'text/event-stream',
+            'X-Accel-Buffering' => 'no',
+        ]);
+    }
+
+    /**
+     * Parse time string to H:i format
+     */
+    private function parseTime($timeStr)
+    {
+        $timeStr = strtoupper(trim($timeStr));
+
+        // Remove spaces
+        $timeStr = str_replace(' ', '', $timeStr);
+
+        // Check for AM/PM
+        $isPM = strpos($timeStr, 'PM') !== false;
+        $isAM = strpos($timeStr, 'AM') !== false;
+
+        // Remove AM/PM
+        $timeStr = str_replace(['AM', 'PM'], '', $timeStr);
+
+        // Parse hour and minute
+        if (strpos($timeStr, ':') !== false) {
+            list($hour, $minute) = explode(':', $timeStr);
+        } else {
+            $hour = $timeStr;
+            $minute = '00';
+        }
+
+        $hour = intval($hour);
+        $minute = intval($minute);
+
+        // Convert to 24-hour format
+        if ($isPM && $hour < 12) {
+            $hour += 12;
+        } elseif ($isAM && $hour == 12) {
+            $hour = 0;
+        }
+
+        // Validate
+        if ($hour < 0 || $hour > 23 || $minute < 0 || $minute > 59) {
+            return null;
+        }
+
+        return sprintf('%02d:%02d', $hour, $minute);
     }
 
     /**
@@ -801,13 +1136,12 @@ class TourismController extends Controller
             'progress' => round($progress, 2),
             'timestamp' => now()->format('Y-m-d H:i:s')
         ];
-        
+
         echo "data: " . json_encode($data) . "\n\n";
-        
+
         if (ob_get_level()) {
             ob_flush();
         }
         flush();
     }
 }
-
