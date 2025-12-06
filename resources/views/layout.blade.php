@@ -54,7 +54,7 @@
                     </a>
 
                     <!-- Jadwalkan Button -->
-                    <a href="#"
+                    <a href="{{ route('itinerary.create') }}"
                         class="hidden sm:flex items-center space-x-2 px-4 py-2 bg-linear-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-purple-500/30 transition duration-300 transform hover:-translate-y-0.5 text-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -89,7 +89,7 @@
                                     </svg>
                                     <span>Rekomendasikan</span>
                                 </a>
-                                <a href="#"
+                                <a href="{{ route('itinerary.create') }}"
                                     class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 transition duration-200">
                                     <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\TourismController;
 use App\Http\Controllers\TripCartController;
+use App\Http\Controllers\ItineraryController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -33,6 +34,11 @@ Route::middleware('auth:web')->group(function () {
     Route::post('/trip-cart/add', [TripCartController::class, 'add'])->name('trip-cart.add');
     Route::delete('/trip-cart/remove/{id}', [TripCartController::class, 'remove'])->name('trip-cart.remove');
     Route::get('/trip-cart', [TripCartController::class, 'index'])->name('trip-cart.index');
+
+    // Itinerary Routes
+    Route::get('/itinerary/create', [ItineraryController::class, 'create'])->name('itinerary.create');
+    Route::post('/itinerary/store', [ItineraryController::class, 'store'])->name('itinerary.store');
+    Route::get('/itinerary/result', [ItineraryController::class, 'result'])->name('itinerary.result');
 });
 
 // Admin Routes (Protected)
