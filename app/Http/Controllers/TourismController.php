@@ -9,19 +9,88 @@ use Illuminate\Http\Request;
 class TourismController extends Controller
 {
     /**
-     * Display a listing of tourism destinations.
+     * Display a listing of tourism destinations with SAW algorithm.
+     * Handles both normal page load and AJAX requests.
      *
-     * @return \Illuminate\View\View
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\View\View|\Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
+    {
+        $result = $this->processTourismList($request);
+        
+        // Return JSON response for AJAX
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('tourism.partials.tourism-list', [
+                    'tourisms' => $result['tourisms']
+                ])->render(),
+                'weights' => $result['weights'],
+                'calculations' => $result['calculations'],
+                'total' => $result['tourisms']->count(),
+            ]);
+        }
+        
+        return $result['view'];
+    }
+
+    /**
+     * Process tourism list with filters and SAW algorithm.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
+     */
+    private function processTourismList(Request $request)
     {
         // Get all categories for filter
         $categories = Category::all();
 
-        // Build query
+        // Build query with filters
         $query = Tourism::with(['categories', 'prices', 'files']);
+        $query = $this->applyFilters($query, $request);
 
-        // Filter by category if provided
+        // Get all tourism data
+        $tourisms = $query->get();
+
+        // Get weights from request (default to 0 if not provided)
+        $weights = $this->getWeights($request);
+
+        // Calculate distances if needed
+        $this->calculateDistancesIfNeeded($tourisms, $request, $weights);
+
+        // Apply SAW algorithm and get detailed results
+        $calculations = $this->calculateSAW($tourisms, $weights);
+        
+        // Extract sorted tourisms
+        $sortedTourisms = collect($calculations)->map(function($result) {
+            return $result['tourism'];
+        });
+
+        return [
+            'view' => view('tourism.index', [
+                'tourisms' => $sortedTourisms,
+                'categories' => $categories,
+                'weights' => $weights,
+                'calculations' => $calculations,
+                'sawMode' => true,
+            ]),
+            'tourisms' => $sortedTourisms,
+            'weights' => $weights,
+            'calculations' => $calculations,
+        ];
+    }
+
+    /**
+     * Apply filters to the tourism query.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    private function applyFilters($query, Request $request)
+    {
+        // Filter by category
         if ($request->has('category') && $request->category != '') {
             $query->whereHas('categories', function($q) use ($request) {
                 $q->where('category.id', $request->category);
@@ -36,28 +105,51 @@ class TourismController extends Controller
             });
         }
 
-        // Sort
-        $sortBy = $request->get('sort', 'rating');
-        switch ($sortBy) {
-            case 'name':
-                $query->orderBy('name', 'asc');
-                break;
-            case 'rating':
-                $query->orderByDesc('rating');
-                break;
-            case 'latest':
-                $query->orderByDesc('created_at');
-                break;
+        return $query;
+    }
+
+    /**
+     * Get weights from request or use 0 as default.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
+     */
+    private function getWeights(Request $request)
+    {
+        $weights = [
+            'popularity' => (float) ($request->weight_popularity ?? 0.5),
+            'rating' => (float) ($request->weight_rating ?? 0.3),
+            'price' => (float) ($request->weight_price ?? 0.2),
+            'distance' => (float) ($request->weight_distance ?? 0),
+        ];
+
+        return $weights;
+    }
+
+    /**
+     * Calculate distances for all tourism if coordinates are provided.
+     *
+     * @param  \Illuminate\Support\Collection  $tourisms
+     * @param  \Illuminate\Http\Request  $request
+     * @param  array  $weights
+     * @return void
+     */
+    private function calculateDistancesIfNeeded($tourisms, Request $request, $weights)
+    {
+        // Only calculate if coordinates are provided
+        if (!$request->has('latitude') || !$request->has('longitude') ||
+            !$request->latitude || !$request->longitude) {
+            return;
         }
 
-        // Paginate
-        $tourisms = $query->paginate(12);
-
-        return view('tourism.index', [
-            'tourisms' => $tourisms,
-            'categories' => $categories,
-            'sawMode' => false,
-        ]);
+        foreach ($tourisms as $tourism) {
+            $tourism->calculated_distance = $this->calculateDistance(
+                $request->latitude,
+                $request->longitude,
+                $tourism->latitude,
+                $tourism->longitude
+            );
+        }
     }
 
     /**
@@ -92,6 +184,120 @@ class TourismController extends Controller
             'tourism' => $tourism,
             'relatedTourism' => $relatedTourism,
         ]);
+    }
+
+    /**
+     * Apply SAW algorithm and return detailed results for each tourism.
+     *
+     * @param \Illuminate\Support\Collection $tourisms Collection of tourism objects
+     * @param array $weights Array of weights for criteria
+     * @return array Array of detailed results with scores and normalization
+     */
+    private function calculateSAW($tourisms, $weights)
+    {
+        if ($tourisms->isEmpty()) {
+            return [];
+        }
+
+        // Step 1: Collect raw data and find min/max values
+        $rawData = [];
+        $maxValues = ['popularity' => 0, 'rating' => 0];
+        $minValues = ['price' => PHP_INT_MAX, 'distance' => PHP_INT_MAX];
+
+        foreach ($tourisms as $tourism) {
+            $data = [
+                'tourism' => $tourism,
+                'popularity' => $tourism->popularity ?? 0,
+                'rating' => $tourism->rating ?? 0,
+                'price' => $tourism->prices->min('price') ?? 0,
+                'distance' => $tourism->calculated_distance ?? 0,
+            ];
+
+            $rawData[$tourism->id] = $data;
+
+            // Track max values for benefit criteria
+            $maxValues['popularity'] = max($maxValues['popularity'], $data['popularity']);
+            $maxValues['rating'] = max($maxValues['rating'], $data['rating']);
+            
+            // Track min values for cost criteria
+            if ($data['price'] > 0) {
+                $minValues['price'] = min($minValues['price'], $data['price']);
+            }
+            if ($data['distance'] > 0) {
+                $minValues['distance'] = min($minValues['distance'], $data['distance']);
+            }
+        }
+
+        // Step 2: Normalize and calculate SAW scores
+        $results = [];
+        foreach ($rawData as $tourismId => $data) {
+            $normalized = $this->normalize($data, $maxValues, $minValues);
+            $weighted = $this->calculateWeighted($normalized, $weights);
+            $sawScore = array_sum($weighted);
+
+            $results[] = [
+                'tourism' => $data['tourism'],
+                'raw_values' => [
+                    'popularity' => $data['popularity'],
+                    'rating' => $data['rating'],
+                    'price' => $data['price'],
+                    'distance' => $data['distance'],
+                ],
+                'normalized' => $normalized,
+                'weighted' => $weighted,
+                'saw_score' => $sawScore,
+            ];
+        }
+
+        // Step 3: Sort by SAW score (descending)
+        usort($results, function($a, $b) {
+            return $b['saw_score'] <=> $a['saw_score'];
+        });
+
+        return $results;
+    }
+
+    /**
+     * Normalize values for SAW algorithm.
+     *
+     * @param array $data Raw data
+     * @param array $maxValues Maximum values for benefit criteria
+     * @param array $minValues Minimum values for cost criteria
+     * @return array Normalized values
+     */
+    private function normalize($data, $maxValues, $minValues)
+    {
+        return [
+            'popularity' => $maxValues['popularity'] > 0 
+                ? $data['popularity'] / $maxValues['popularity'] 
+                : 0,
+            'rating' => $maxValues['rating'] > 0 
+                ? $data['rating'] / $maxValues['rating'] 
+                : 0,
+            'price' => ($data['price'] > 0 && $minValues['price'] > 0) 
+                ? $minValues['price'] / $data['price'] 
+                : 1,
+            'distance' => ($data['distance'] > 0 && $minValues['distance'] > 0) 
+                ? $minValues['distance'] / $data['distance'] 
+                : 1,
+        ];
+    }
+
+    /**
+     * Calculate weighted scores for each criterion.
+     *
+     * @param array $normalized Normalized values
+     * @param array $weights Weights for each criterion
+     * @return array Weighted scores
+     */
+    private function calculateWeighted($normalized, $weights)
+    {
+        return [
+            'popularity' => $normalized['popularity'] * ($weights['popularity'] ?? 0),
+            'rating' => $normalized['rating'] * ($weights['rating'] ?? 0),
+            'price' => $normalized['price'] * ($weights['price'] ?? 0),
+            'distance' => $normalized['distance'] * ($weights['distance'] ?? 0),
+        ];
     }
 
     /**
@@ -171,211 +377,5 @@ class TourismController extends Controller
         $distance = $earthRadius * $c;
 
         return round($distance, 2);
-    }
-
-    /**
-     * SAW (Simple Additive Weighting) Algorithm for tourism recommendation.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return void
-     */
-    public function saw(Request $request)
-    {
-        // Get weights from request
-        $weights = [
-            'rating' => floatval($request->weight_rating) / 100,
-            'price' => floatval($request->weight_price) / 100,
-            'distance' => floatval($request->weight_distance) / 100,
-        ];
-
-        // Get selected categories and their weights
-        $selectedCategories = [];
-        $categoryWeightTotal = 0;
-
-        if ($request->has('categories')) {
-            foreach ($request->categories as $categoryId) {
-                $weightKey = 'weight_category_' . $categoryId;
-                $weight = floatval($request->$weightKey);
-                if ($weight > 0) {
-                    $selectedCategories[$categoryId] = $weight / 100;
-                    $categoryWeightTotal += $weight / 100;
-                }
-            }
-        }
-
-        // Validate total weight must be exactly 100%
-        $totalWeight = $weights['rating'] + $weights['price'] + $weights['distance'] + $categoryWeightTotal;
-
-        if (abs($totalWeight - 1.0) > 0.001) { // Allow small floating point differences
-            return redirect()->route('tourism.index')->with('error', 'Total bobot harus tepat 100%! Total saat ini: ' . number_format($totalWeight * 100, 2) . '%');
-        }
-
-        // User coordinates
-        $userLat = floatval($request->latitude);
-        $userLon = floatval($request->longitude);
-
-        // Get all tourism with relations
-        $tourisms = Tourism::with(['categories', 'prices'])->get();
-
-        // Initialize arrays for normalization
-        $rawData = [];
-        $maxValues = [
-            'rating' => 0,
-            'price' => 0,
-            'distance' => 0,
-        ];
-        $minValues = [
-            'rating' => PHP_INT_MAX,
-            'price' => PHP_INT_MAX,
-            'distance' => PHP_INT_MAX,
-        ];
-
-        // Collect raw data and find min/max values
-        foreach ($tourisms as $tourism) {
-            // Rating (benefit - higher is better)
-            $rating = $tourism->rating;
-
-            // Price (cost - lower is better) - use minimum price
-            $price = $tourism->prices->min('price') ?? 0;
-
-            // Distance (cost - lower is better)
-            $distance = $this->calculateDistance(
-                $userLat,
-                $userLon,
-                $tourism->latitude,
-                $tourism->longitude
-            );
-
-            // Category matching - INDIVIDUAL per category (benefit - 1 if matches, 0 if not)
-            $categoryMatches = [];
-            $tourismCategories = $tourism->categories->pluck('id')->toArray();
-
-            foreach ($selectedCategories as $catId => $catWeight) {
-                $categoryMatches[$catId] = in_array($catId, $tourismCategories) ? 1 : 0;
-            }
-
-            // Store raw data
-            $rawData[$tourism->id] = [
-                'tourism' => $tourism,
-                'rating' => $rating,
-                'price' => $price,
-                'distance' => $distance,
-                'categories' => $categoryMatches, // Array of individual category matches
-            ];
-
-            // Update min/max values
-            $maxValues['rating'] = max($maxValues['rating'], $rating);
-            $maxValues['distance'] = max($maxValues['distance'], $distance);
-
-            $minValues['rating'] = min($minValues['rating'], $rating);
-            $minValues['price'] = min($minValues['price'], $price > 0 ? $price : PHP_INT_MAX);
-            $minValues['distance'] = min($minValues['distance'], $distance);
-        }
-
-        // Normalize and calculate SAW scores
-        $results = [];
-        foreach ($rawData as $tourismId => $data) {
-            $normalized = [];
-
-            // Normalize Rating (benefit: value/max)
-            $normalized['rating'] = $maxValues['rating'] > 0
-                ? $data['rating'] / $maxValues['rating']
-                : 0;
-
-            // Normalize Price (cost: min/value) - lower is better
-            $normalized['price'] = ($data['price'] > 0 && $minValues['price'] > 0)
-                ? $minValues['price'] / $data['price']
-                : 1; // Free entrance gets max score
-
-            // Normalize Distance (cost: min/value) - lower is better
-            $normalized['distance'] = ($data['distance'] > 0 && $minValues['distance'] > 0)
-                ? $minValues['distance'] / $data['distance']
-                : 1;
-
-            // Normalize each category individually (already 0 or 1, no normalization needed)
-            $normalized['categories'] = [];
-            foreach ($selectedCategories as $catId => $catWeight) {
-                $normalized['categories'][$catId] = $data['categories'][$catId] ?? 0;
-            }
-
-            // Calculate weighted sum (SAW formula)
-            $sawScore =
-                ($normalized['rating'] * $weights['rating']) +
-                ($normalized['price'] * $weights['price']) +
-                ($normalized['distance'] * $weights['distance']);
-
-            // Add each category score individually
-            foreach ($selectedCategories as $catId => $catWeight) {
-                $sawScore += ($normalized['categories'][$catId] * $catWeight);
-            }
-
-            $results[] = [
-                'tourism_id' => $tourismId,
-                'tourism_name' => $data['tourism']->name,
-                'raw_data' => $data,
-                'normalized' => $normalized,
-                'weights' => array_merge($weights, ['categories' => $selectedCategories]),
-                'saw_score' => $sawScore,
-            ];
-        }
-
-        // Sort by SAW score (highest first)
-        usort($results, function($a, $b) {
-            return $b['saw_score'] <=> $a['saw_score'];
-        });
-
-        // Get all tourism recommendations (no slicing)
-        $recommendations = [];
-        foreach ($results as $result) {
-            $recommendations[] = $result['raw_data']['tourism'];
-        }
-
-        // Store calculation data in session for modal view
-        session([
-            'saw_calculation' => [
-                'input' => [
-                    'weights' => array_merge($weights, ['category_total' => $categoryWeightTotal]),
-                    'selected_categories' => $selectedCategories,
-                    'user_coordinates' => ['lat' => $userLat, 'lon' => $userLon],
-                ],
-                'minMaxValues' => [
-                    'max' => $maxValues,
-                    'min' => $minValues,
-                ],
-                'results' => $results,
-            ]
-        ]);
-
-        // Return to index with all SAW results
-        return view('tourism.index', [
-            'tourisms' => collect($recommendations), // All results, not sliced
-            'categories' => Category::all(),
-            'sawMode' => true,
-            'totalResults' => count($results),
-            'sawCalculation' => session('saw_calculation'), // Pass to view for modal
-        ]);
-    }
-
-    /**
-     * Show detailed SAW calculation from session.
-     *
-     * @return \Illuminate\View\View
-     */
-    public function showCalculation()
-    {
-        // Get calculation data from session
-        $calculationData = session('saw_calculation');
-
-        if (!$calculationData) {
-            return redirect()->route('tourism.index')->with('error', 'Tidak ada data perhitungan. Silakan lakukan pencarian rekomendasi terlebih dahulu.');
-        }
-
-        return view('tourism.saw', [
-            'input' => $calculationData['input'],
-            'minMaxValues' => $calculationData['minMaxValues'],
-            'results' => $calculationData['results'],
-            'topRecommendations' => array_slice($calculationData['results'], 0, 5),
-            'categories' => Category::all(),
-        ]);
     }
 }

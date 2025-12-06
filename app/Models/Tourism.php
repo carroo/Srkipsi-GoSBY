@@ -82,4 +82,31 @@ class Tourism extends Model
     {
         return $this->hasMany(TourismReview::class);
     }
+
+    /**
+     * Check if this tourism is in the trip cart for a specific user.
+     *
+     * @param int|null $userId
+     * @return bool
+     */
+    public function isInTripCart($userId = null): bool
+    {
+        $userId = $userId ?? auth()->id();
+        
+        if (!$userId) {
+            return false;
+        }
+
+        return $this->tripCart()->where('user_id', $userId)->exists();
+    }
+
+    /**
+     * Get the is_in_trip_cart attribute (for current authenticated user).
+     *
+     * @return bool
+     */
+    public function getIsInTripCartAttribute(): bool
+    {
+        return $this->isInTripCart();
+    }
 }

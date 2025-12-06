@@ -3,748 +3,1146 @@
 @section('title', 'Jelajahi Wisata Surabaya')
 
 @section('content')
-<style>
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
+    <style>
+        /* Minimal custom CSS - only for complex animations and dynamic states */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        to {
-            opacity: 1;
-            transform: translateY(0);
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-    }
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
+
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
         }
-        to {
-            opacity: 1;
-            transform: translateY(0);
+
+        .animate-slide-down {
+            animation: slideDown 0.4s ease-out;
         }
-    }
-    .animate-fade-in-up {
-        animation: fadeInUp 0.6s ease-out;
-    }
-    .animate-slide-down {
-        animation: slideDown 0.4s ease-out;
-    }
-    .modal-backdrop {
-        backdrop-filter: blur(4px);
-    }
-</style>
 
-<!-- Hero Section -->
-<section class="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white py-16">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Error Alert -->
-        @if(session('error'))
-            <div class="mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-r-lg shadow-lg animate-slide-down" role="alert">
-                <div class="flex items-center">
-                    <svg class="w-6 h-6 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                    </svg>
-                    <div>
-                        <p class="font-bold text-lg">Validasi Gagal!</p>
-                        <p class="text-sm">{{ session('error') }}</p>
-                    </div>
-                </div>
-            </div>
-        @endif
+        .criteria-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
 
-        <div class="text-center animate-fade-in-up">
-            <h1 class="text-4xl md:text-5xl font-black mb-4">Jelajahi Wisata Surabaya</h1>
-            <p class="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto">
-                Temukan destinasi wisata terbaik di Surabaya atau dapatkan rekomendasi personal sesuai preferensi Anda
-            </p>
+        .criteria-item.drag-over {
+            border-color: #3b82f6 !important;
+            background-color: #eff6ff !important;
+        }
+    </style>
 
-            <!-- Main CTA Button -->
-            <button onclick="openRecommendationModal()" class="inline-flex items-center bg-white text-blue-600 hover:bg-gray-100 font-bold py-4 px-8 rounded-xl shadow-2xl transform hover:scale-105 transition duration-300">
-                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                </svg>
-                Cari Rekomendasi
-            </button>
-        </div>
-    </div>
-</section>
-
-<!-- Filter & Search Section -->
-<section class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        @if(isset($sawMode) && $sawMode)
-            <!-- SAW Mode Header -->
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <svg class="w-6 h-6 text-blue-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                    </svg>
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-900">Hasil Rekomendasi SAW</h2>
-                        <p class="text-sm text-gray-600">Menampilkan {{ $tourisms->count() }} wisata berdasarkan preferensi Anda</p>
-                    </div>
-                </div>
-                <div class="flex gap-3">
-                    <button onclick="openCalculationModal()" class="inline-flex items-center bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-2.5 px-5 rounded-lg hover:from-purple-700 hover:to-indigo-700 transform hover:scale-105 transition duration-300 shadow-lg">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                        </svg>
-                        Lihat Perhitungan Detail
-                    </button>
-                    <a href="{{ route('tourism.index') }}" class="inline-flex items-center bg-gray-600 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-gray-700 transition duration-300">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                        Reset
-                    </a>
-                </div>
-            </div>
-        @else
-            <!-- Normal Filter Form -->
-            <form method="GET" action="{{ route('tourism.index') }}" class="grid md:grid-cols-4 gap-4">
-            <!-- Search -->
-            <div class="md:col-span-2">
-                <div class="relative">
-                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari wisata atau lokasi..."
-                           class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
-            </div>
-
-            <!-- Category Filter -->
-            <div>
-                <select name="category" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="">Semua Kategori</option>
-                    @foreach($categories as $category)
-                        <option value="{{ $category->id }}" {{ request('category') == $category->id ? 'selected' : '' }}>
-                            {{ $category->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <!-- Sort -->
-            <div>
-                <select name="sort" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="rating" {{ request('sort') == 'rating' ? 'selected' : '' }}>Rating Tertinggi</option>
-                    <option value="name" {{ request('sort') == 'name' ? 'selected' : '' }}>Nama (A-Z)</option>
-                    <option value="latest" {{ request('sort') == 'latest' ? 'selected' : '' }}>Terbaru</option>
-                </select>
-            </div>
-
-            <!-- Hidden submit button for form -->
-            <button type="submit" class="hidden">Filter</button>
-        </form>
-        @endif
-    </div>
-</section>
-
-<!-- Results Info -->
-<section class="bg-gray-50 py-4">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between">
-            @if(isset($sawMode) && $sawMode)
-                <p class="text-gray-600">
-                    Menampilkan <span class="font-bold text-gray-900">{{ $tourisms->count() }}</span>
-                    rekomendasi teratas dari <span class="font-bold text-gray-900">{{ $totalResults }}</span> wisata
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center animate-fade-in-up">
+                <h1 class="text-3xl md:text-4xl font-black mb-2">Rekomendasi Wisata Surabaya</h1>
+                <p class="text-lg text-blue-100">
+                    Destinasi wisata terbaik berdasarkan algoritma SAW (Simple Additive Weighting)
                 </p>
-            @else
-                <p class="text-gray-600">
-                    Menampilkan <span class="font-bold text-gray-900">{{ $tourisms->count() }}</span> dari
-                    <span class="font-bold text-gray-900">{{ $tourisms->total() }}</span> wisata
-                </p>
-            @endif
-
-            @if(request('search') || request('category'))
-                <a href="{{ route('tourism.index') }}" class="text-blue-600 hover:text-blue-700 font-semibold text-sm">
-                    Reset Filter
-                </a>
-            @endif
-        </div>
-    </div>
-</section>
-
-<!-- Tourism Cards Grid -->
-<section class="py-12 bg-gray-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        @if($tourisms->count() > 0)
-            @if(isset($sawMode) && $sawMode)
-                <!-- SAW Results Badge -->
-                <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-4">
-                    <div class="flex items-center">
-                        <svg class="w-6 h-6 text-blue-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                        </svg>
-                        <div>
-                            <p class="font-bold text-blue-900">Hasil diurutkan berdasarkan Skor SAW (Simple Additive Weighting)</p>
-                            <p class="text-sm text-blue-700">Wisata dengan skor tertinggi paling sesuai dengan preferensi Anda</p>
-                        </div>
-                    </div>
-                </div>
-            @endif
-
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                @foreach($tourisms as $index => $tourism)
-                    <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition duration-300 transform hover:scale-105 hover:-translate-y-2 group animate-fade-in-up"
-                       style="animation-delay: {{ ($index % 12) * 0.05 }}s;">
-                        <a href="{{ route('tourism.show', $tourism->id) }}" class="block">
-
-                        <!-- Image -->
-                        <div class="relative h-48 bg-gray-200 overflow-hidden">
-                            @if($tourism->files->isNotEmpty())
-                                <img src="{{ filter_var($tourism->files->first()->file_path, FILTER_VALIDATE_URL) ? $tourism->files->first()->file_path : asset('storage/' . $tourism->files->first()->file_path) }}"
-                                     alt="{{ $tourism->name }}"
-                                     class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
-                            @else
-                                <img src="https://picsum.photos/400/300?random={{ $tourism->id }}"
-                                     alt="{{ $tourism->name }}"
-                                     class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
-                            @endif
-
-                            <!-- SAW Ranking Badge (if SAW mode) -->
-                            @if(isset($sawMode) && $sawMode)
-                                <div class="absolute top-2 left-2">
-                                    @if($index < 3)
-                                        <div class="inline-flex items-center justify-center w-10 h-10 rounded-full {{ $index == 0 ? 'bg-yellow-400' : ($index == 1 ? 'bg-gray-300' : 'bg-orange-400') }} text-gray-900 font-black text-lg shadow-lg">
-                                            {{ $index + 1 }}
-                                        </div>
-                                    @else
-                                        <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-600 text-white font-black text-lg shadow-lg">
-                                            {{ $index + 1 }}
-                                        </div>
-                                    @endif
-                                </div>
-                            @endif
-
-                            <!-- Categories Badge -->
-                            @if($tourism->categories->isNotEmpty())
-                                <div class="absolute {{ isset($sawMode) && $sawMode ? 'top-14' : 'top-2' }} left-2 flex flex-wrap gap-1">
-                                    @foreach($tourism->categories->take(2) as $catIndex => $category)
-                                        @php
-                                            $colors = ['bg-blue-600', 'bg-green-600', 'bg-purple-600', 'bg-orange-600', 'bg-pink-600'];
-                                            $color = $colors[$catIndex % count($colors)];
-                                        @endphp
-                                        <span class="{{ $color }} text-white px-2 py-1 rounded-full text-xs font-bold shadow-md">
-                                            {{ $category->name }}
-                                        </span>
-                                    @endforeach
-                                    @if($tourism->categories->count() > 2)
-                                        <span class="bg-gray-800 bg-opacity-80 text-white px-2 py-1 rounded-full text-xs font-bold shadow-md">
-                                            +{{ $tourism->categories->count() - 2 }}
-                                        </span>
-                                    @endif
-                                </div>
-                            @endif
-
-                            <!-- Rating Badge -->
-                            <div class="absolute bottom-2 right-2 bg-white bg-opacity-95 px-2.5 py-1 rounded-full shadow-md">
-                                <span class="text-yellow-500 text-sm font-bold">★ {{ number_format($tourism->rating, 1) }}</span>
-                            </div>
-                        </div>
-
-                        <!-- Content -->
-                        <div class="p-4">
-                            <h3 class="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition duration-200 line-clamp-2">
-                                {{ $tourism->name }}
-                            </h3>
-
-                            <div class="flex items-start text-gray-600 text-sm mb-3">
-                                <svg class="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                </svg>
-                                <span class="line-clamp-1">{{ $tourism->location }}</span>
-                            </div>
-
-                            <p class="text-gray-600 text-sm mb-4 line-clamp-2">
-                                {{ $tourism->description }}
-                            </p>
-
-                            <!-- Price -->
-                            <div class="flex items-center justify-between pt-3 border-t border-gray-100">
-                                @if($tourism->prices->isNotEmpty())
-                                    @php
-                                        $minPrice = $tourism->prices->min('price');
-                                    @endphp
-                                    @if($minPrice == 0)
-                                        <span class="text-green-600 font-bold text-sm">GRATIS</span>
-                                    @else
-                                        <div>
-                                            <span class="text-xs text-gray-500">Mulai dari</span>
-                                            <p class="text-blue-600 font-bold">Rp {{ number_format($minPrice, 0, ',', '.') }}</p>
-                                        </div>
-                                    @endif
-                                @else
-                                    <span class="text-gray-400 text-sm">-</span>
-                                @endif
-
-                                <span class="text-blue-600 group-hover:text-blue-700 font-semibold text-sm">
-                                    Lihat Detail →
-                                </span>
-                            </div>
-                        </div>
-                    </a>
-
-                    <!-- Trip Cart Button -->
-                    <div class="px-4 pb-4">
-                        @auth
-                            <button class="add-to-trip-cart w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition duration-300 shadow-md flex items-center justify-center"
-                                    data-tourism-id="{{ $tourism->id }}"
-                                    data-tourism-name="{{ $tourism->name }}">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                </svg>
-                                <span class="button-text">Tambah ke Trip Cart</span>
-                            </button>
-                        @else
-                            <a href="{{ route('login') }}" class="block w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-semibold py-2 px-4 rounded-lg text-sm text-center transition duration-300 shadow-md">
-                                Login untuk Menambahkan
-                            </a>
-                        @endauth
-                    </div>
-                </div>
-                @endforeach
-            </div>
-
-            <!-- Pagination (only for normal mode) -->
-            @if(!isset($sawMode) || !$sawMode)
-                <div class="mt-12">
-                    {{ $tourisms->links() }}
-                </div>
-            @endif
-
-        @else
-            <!-- Empty State -->
-            <div class="text-center py-16">
-                <svg class="w-24 h-24 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <h3 class="text-2xl font-bold text-gray-900 mb-2">Tidak ada wisata ditemukan</h3>
-                <p class="text-gray-600 mb-6">Coba ubah filter atau kata kunci pencarian Anda</p>
-                <a href="{{ route('tourism.index') }}" class="inline-block bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
-                    Reset Filter
-                </a>
-            </div>
-        @endif
-    </div>
-</section>
-
-<!-- Floating Action Button (Mobile) -->
-<button onclick="openRecommendationModal()" class="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 rounded-full shadow-2xl hover:shadow-blue-500/50 transform hover:scale-110 transition duration-300 z-50 md:hidden">
-    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-    </svg>
-</button>
-
-<!-- Recommendation Modal -->
-<div id="recommendationModal" class="hidden fixed inset-0 bg-transparent bg-opacity-90 z-50 flex items-center justify-center p-4 modal-backdrop">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden animate-slide-down">
-        <!-- Modal Header -->
-        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-2xl font-bold mb-1">Cari Rekomendasi Wisata</h2>
-                    <p class="text-blue-100">Dapatkan rekomendasi wisata terbaik sesuai preferensi Anda</p>
-                </div>
-                <button onclick="closeRecommendationModal()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition duration-200">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
             </div>
         </div>
+    </section>
 
-        <!-- Modal Body -->
-        <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 200px);">
-            <form id="recommendationForm" method="POST" action="{{ route('tourism.saw') }}">
-                @csrf
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 backdrop-blur-md bg-white/30 z-50 flex items-center justify-center"
+        style="display: none;">
+        <div class="bg-white rounded-xl p-8 flex flex-col items-center shadow-2xl border border-gray-200">
+            <svg class="animate-spin h-16 w-16 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                </circle>
+                <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+            </svg>
+            <p class="text-gray-700 font-semibold text-lg">Memproses rekomendasi...</p>
+            <p class="text-gray-500 text-sm mt-2">Mohon tunggu sebentar</p>
+        </div>
+    </div>
 
-                <!-- Info Box -->
-                <div class="bg-blue-50 border-l-4 border-blue-600 p-4 mb-6 rounded-r-lg">
-                    <div class="flex items-start">
-                        <svg class="w-5 h-5 text-blue-600 mr-3 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
-                        </svg>
-                        <div>
-                            <p class="text-sm text-blue-800 font-semibold">Petunjuk Pengisian</p>
-                            <p class="text-sm text-blue-700 mt-1">Tentukan bobot kepentingan untuk setiap kriteria. Total persentase harus <strong>100%</strong></p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid md:grid-cols-2 gap-6">
-                    <!-- Kriteria 1: Rating -->
-                    <div class="bg-gradient-to-br from-yellow-50 to-orange-50 p-5 rounded-xl border-2 border-yellow-200">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-yellow-500 p-2 rounded-lg mr-3">
-                                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                </svg>
-                            </div>
+    <!-- Main Content Section -->
+    <section class="py-6 bg-gray-50 min-h-screen">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex gap-6">
+                <!-- Left Side: Tourism Cards (2/3) -->
+                <div class="flex-1" style="flex: 0 0 66.666667%;">
+                    <!-- Filter Section -->
+                    <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+                        <div class="flex items-center gap-4">
+                            <!-- Search -->
                             <div class="flex-1">
-                                <label class="block text-sm font-bold text-gray-900 mb-1">Rating Wisata</label>
-                                <p class="text-xs text-gray-600">Pentingnya rating tinggi</p>
-                            </div>
-                        </div>
-                        <div class="relative">
-                            <input type="number" name="weight_rating" min="0" max="100" step="1" value="20"
-                                   class="w-full px-4 py-3 border-2 border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-bold text-lg text-center"
-                                   onchange="calculateTotal()">
-                            <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-yellow-600 font-bold">%</span>
-                        </div>
-                    </div>
-
-                    <!-- Kriteria 2: Harga -->
-                    <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-5 rounded-xl border-2 border-green-200">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-green-500 p-2 rounded-lg mr-3">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <label class="block text-sm font-bold text-gray-900 mb-1">Harga Tiket</label>
-                                <p class="text-xs text-gray-600">Pentingnya harga murah</p>
-                            </div>
-                        </div>
-                        <div class="relative">
-                            <input type="number" name="weight_price" min="0" max="100" step="1" value="20"
-                                   class="w-full px-4 py-3 border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-bold text-lg text-center"
-                                   onchange="calculateTotal()">
-                            <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-green-600 font-bold">%</span>
-                        </div>
-                    </div>
-
-                    <!-- Kriteria 3: Jarak -->
-                    <div class="bg-gradient-to-br from-blue-50 to-cyan-50 p-5 rounded-xl border-2 border-blue-200">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-blue-500 p-2 rounded-lg mr-3">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <label class="block text-sm font-bold text-gray-900 mb-1">Jarak Lokasi</label>
-                                <p class="text-xs text-gray-600">Pentingnya lokasi dekat</p>
-                            </div>
-                        </div>
-
-                        <!-- Latitude Longitude Input -->
-                        <div class="mb-3">
-                            <div class="flex items-center justify-between mb-2">
-                                <label class="block text-xs text-gray-600">Lokasi Anda</label>
-                                <button type="button" onclick="detectLocation()" class="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 font-semibold transition-colors duration-200">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <div class="relative">
+                                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                                     </svg>
-                                    Deteksi Lokasi GPS
-                                </button>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label class="block text-xs text-gray-500 mb-1">Latitude</label>
-                                    <input type="text" id="latitudeInput" name="latitude" placeholder="-7.2575"
-                                           class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-500 mb-1">Longitude</label>
-                                    <input type="text" id="longitudeInput" name="longitude" placeholder="112.7521"
-                                           class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                                    <input type="text" id="searchInput" placeholder="Cari wisata atau lokasi..."
+                                        value="{{ request('search') }}"
+                                        class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Weight Percentage -->
-                        <div class="relative">
-                            <input type="number" name="weight_distance" min="0" max="100" step="1" value="20"
-                                   class="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-bold text-lg text-center"
-                                   onchange="calculateTotal()">
-                            <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-blue-600 font-bold">%</span>
+                            <!-- Category Filter -->
+                            <div style="min-width: 200px;">
+                                <select id="categoryFilter"
+                                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="">Semua Kategori</option>
+                                    @foreach ($categories as $category)
+                                        <option value="{{ $category->id }}"
+                                            {{ request('category') == $category->id ? 'selected' : '' }}>
+                                            {{ $category->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Kriteria 5: Kategori (Full Width) -->
-                    <div class="md:col-span-2 bg-gradient-to-br from-indigo-50 to-purple-50 p-5 rounded-xl border-2 border-indigo-200">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-indigo-500 p-2 rounded-lg mr-3">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                    <!-- Results Info -->
+                    <div class="bg-blue-50 border-l-4 border-blue-600 p-4 mb-6 rounded-r-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <svg class="w-6 h-6 text-blue-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z">
+                                    </path>
                                 </svg>
+                                <div>
+                                    <p class="font-bold text-blue-900">Hasil Rekomendasi SAW</p>
+                                    <p class="text-sm text-blue-700">
+                                        <span id="showingCount">12</span> dari <span
+                                            id="totalCount">{{ $tourisms->count() }}</span> wisata
+                                    </p>
+                                </div>
                             </div>
-                            <div class="flex-1">
-                                <label class="block text-sm font-bold text-gray-900 mb-1">Kategori Wisata</label>
-                                <p class="text-xs text-gray-600">Pilih kategori dan tentukan bobot masing-masing (%)</p>
+                            <div class="flex items-center gap-3">
+                                <button onclick="showSAWCalculation()"
+                                    class="inline-flex items-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 transform hover:scale-105">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                                        </path>
+                                    </svg>
+                                    Lihat Perhitungan
+                                </button>
+                                @if (request('search') || request('category'))
+                                    <button onclick="resetFilters()"
+                                        class="text-blue-600 hover:text-blue-800 font-semibold text-sm">
+                                        Reset Filter
+                                    </button>
+                                @endif
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Category with Individual Percentage -->
-                        <div class="space-y-3">
-                            @foreach($categories as $category)
-                                <div class="flex items-center gap-4 p-4 bg-white border-2 border-indigo-200 rounded-lg hover:border-indigo-400 transition duration-200">
-                                    <label class="flex items-center flex-1 cursor-pointer">
-                                        <input type="checkbox"
-                                               name="categories[]"
-                                               value="{{ $category->id }}"
-                                               class="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 category-checkbox"
-                                               data-category-id="{{ $category->id }}"
-                                               onchange="toggleCategoryWeight({{ $category->id }})">
-                                        <span class="ml-3 text-sm font-bold text-gray-900">{{ $category->name }}</span>
-                                    </label>
+                    <!-- Tourism Cards Container -->
+                    <div id="tourismCardsContainer">
+                       
+                    </div>
+                </div>
 
-                                    <div class="relative w-32">
-                                        <input type="number"
-                                               name="weight_category_{{ $category->id }}"
-                                               id="weight_category_{{ $category->id }}"
-                                               min="0"
-                                               max="100"
-                                               step="1"
-                                               value="0"
-                                               disabled
-                                               class="w-full px-3 py-2 pr-8 border-2 border-gray-300 rounded-lg text-center font-bold text-sm disabled:bg-gray-100 disabled:text-gray-400 enabled:border-indigo-300 enabled:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent category-weight"
-                                               onchange="calculateTotal()">
-                                        <span class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm font-bold">%</span>
+                <!-- Right Side: SAW Criteria Form (1/3) -->
+                <div class="flex-shrink-0" style="width: 33.333333%;">
+                    <div class="sticky top-6">
+                        <form id="sawForm" method="GET" action="{{ route('tourism.index') }}"
+                            class="bg-white rounded-xl shadow-lg p-6">
+                            @csrf
+
+                            <!-- Info Box -->
+                            <div class="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4 rounded-r">
+                                <div class="flex items-start">
+                                    <svg class="w-5 h-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0" fill="currentColor"
+                                        viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd"
+                                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                            clip-rule="evenodd"></path>
+                                    </svg>
+                                    <div class="text-sm text-blue-800">
+                                        <p class="font-semibold">Urutkan kriteria dari yang paling penting sampai yang
+                                            kurang penting</p>
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            💡 Geser kriteria atau gunakan tombol panah ⬆️ untuk mengurutkan
+                                        </p>
                                     </div>
                                 </div>
-                            @endforeach
-                        </div>
+                            </div>
 
-                        <div class="mt-4 p-3 bg-indigo-100 border border-indigo-300 rounded-lg">
-                            <p class="text-xs text-indigo-800">
-                                <strong>💡 Tip:</strong> Centang kategori yang Anda minati, lalu atur bobotnya. Contoh: Pantai 30%, Gunung 20%, Museum 10%.
-                            </p>
-                        </div>
+                            <!-- Advanced Mode Toggle -->
+                            <div class="mb-4">
+                                <button type="button" onclick="toggleAdvancedMode()"
+                                    class="text-sm text-blue-600 hover:text-blue-800 font-semibold flex items-center">
+                                    <svg id="advancedIcon" class="w-4 h-4 mr-1 transition-transform" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                    <span id="advancedText">Mode Lanjutan (Atur Nilai Manual)</span>
+                                </button>
+                            </div>
+
+                            <!-- Advanced Mode Info (Hidden by default) -->
+                            <div id="advancedInfo" class="bg-amber-50 border-l-4 border-amber-500 p-3 mb-4 rounded-r"
+                                style="display: none;">
+                                <div class="text-sm text-amber-800">
+                                    <p class="font-semibold mb-1">Mode Lanjutan Aktif</p>
+                                    <p class="text-xs">Anda dapat mengatur nilai prioritas secara manual. Total harus 100%
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Drag and Drop Container -->
+                            <div id="criteriaContainer" class="space-y-4 mb-6">
+                                <!-- Criteria 1: Popularity -->
+                                <div class="criteria-item relative bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-move hover:-translate-y-0.5"
+                                    draggable="true" data-criterion="popularity" data-rank="1">
+                                    <div
+                                        class="absolute -top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10 bg-gradient-to-br from-amber-400 to-amber-500 text-amber-900 rank-badge rank-1">
+                                        1</div>
+                                    <button type="button"
+                                        class="move-up-btn absolute top-1/2 -right-3 -translate-y-1/2 w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 z-[15] border-2 border-white disabled"
+                                        onclick="moveUp(this)" title="Pindahkan ke atas">
+                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 15l7-7 7 7"></path>
+                                        </svg>
+                                    </button>
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center flex-1 ml-6">
+                                            <div class="bg-purple-500 p-2.5 rounded-lg mr-3">
+                                                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z">
+                                                    </path>
+                                                </svg>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h3 class="font-bold text-gray-900 text-sm">Popularitas</h3>
+                                                <p class="text-xs text-gray-600">Tingkat kepopuleran wisata</p>
+                                            </div>
+                                        </div>
+                                        <div class="ml-3">
+                                            <div class="weight-label-text text-lg hidden font-bold text-gray-900">50%</div>
+                                            <input type="number"
+                                                class="weight-input-field hidden w-[70px] px-2 py-1 border-2 border-blue-500 rounded-md text-base font-bold text-center"
+                                                min="0" max="100" step="1" value="50">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Criteria 2: Rating -->
+                                <div class="criteria-item relative bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-move hover:-translate-y-0.5"
+                                    draggable="true" data-criterion="rating" data-rank="2">
+                                    <div
+                                        class="absolute -top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10 bg-gradient-to-br from-blue-500 to-blue-600 text-white rank-badge rank-2">
+                                        2</div>
+                                    <button type="button"
+                                        class="move-up-btn absolute top-1/2 -right-3 -translate-y-1/2 w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 z-[15] border-2 border-white"
+                                        onclick="moveUp(this)" title="Pindahkan ke atas">
+                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 15l7-7 7 7"></path>
+                                        </svg>
+                                    </button>
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center flex-1 ml-6">
+                                            <div class="bg-yellow-500 p-2.5 rounded-lg mr-3">
+                                                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z">
+                                                    </path>
+                                                </svg>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h3 class="font-bold text-gray-900 text-sm">Rating</h3>
+                                                <p class="text-xs text-gray-600">Penilaian pengunjung</p>
+                                            </div>
+                                        </div>
+                                        <div class="ml-3">
+                                            <div class="weight-label-text text-lg hidden font-bold text-gray-900">30%</div>
+                                            <input type="number"
+                                                class="weight-input-field hidden w-[70px] px-2 py-1 border-2 border-blue-500 rounded-md text-base font-bold text-center"
+                                                min="0" max="100" step="1" value="30">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Criteria 3: Price -->
+                                <div class="criteria-item relative bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-move hover:-translate-y-0.5"
+                                    draggable="true" data-criterion="price" data-rank="3">
+                                    <div
+                                        class="absolute -top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10 bg-gradient-to-br from-green-500 to-green-600 text-white rank-badge rank-3">
+                                        3</div>
+                                    <button type="button"
+                                        class="move-up-btn absolute top-1/2 -right-3 -translate-y-1/2 w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 z-[15] border-2 border-white"
+                                        onclick="moveUp(this)" title="Pindahkan ke atas">
+                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 15l7-7 7 7"></path>
+                                        </svg>
+                                    </button>
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center flex-1 ml-6">
+                                            <div class="bg-green-500 p-2.5 rounded-lg mr-3">
+                                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                                                    </path>
+                                                </svg>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h3 class="font-bold text-gray-900 text-sm">Harga</h3>
+                                                <p class="text-xs text-gray-600">Biaya tiket masuk</p>
+                                            </div>
+                                        </div>
+                                        <div class="ml-3">
+                                            <div class="weight-label-text text-lg hidden font-bold text-gray-900">20%</div>
+                                            <input type="number"
+                                                class="weight-input-field hidden w-[70px] px-2 py-1 border-2 border-blue-500 rounded-md text-base font-bold text-center"
+                                                min="0" max="100" step="1" value="20">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Criteria 4: Distance (Hidden by default) -->
+                                <div class="criteria-item relative bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-move hover:-translate-y-0.5"
+                                    draggable="true" data-criterion="distance" data-rank="4" id="distanceCriteria"
+                                    style="display: none;">
+                                    <div
+                                        class="absolute -top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10 bg-gradient-to-br from-purple-500 to-purple-600 text-white rank-badge rank-4">
+                                        4</div>
+                                    <button type="button"
+                                        class="move-up-btn absolute top-1/2 -right-3 -translate-y-1/2 w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 z-[15] border-2 border-white"
+                                        onclick="moveUp(this)" title="Pindahkan ke atas">
+                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 15l7-7 7 7"></path>
+                                        </svg>
+                                    </button>
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center flex-1 ml-6">
+                                            <div class="bg-blue-500 p-2.5 rounded-lg mr-3">
+                                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z">
+                                                    </path>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                </svg>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h3 class="font-bold text-gray-900 text-sm">Jarak</h3>
+                                                <p class="text-xs text-gray-600">Kedekatan lokasi</p>
+                                            </div>
+                                        </div>
+                                        <div class="ml-3">
+                                            <div class="weight-label-text text-lg hidden font-bold text-gray-900">0%</div>
+                                            <input type="number"
+                                                class="weight-input-field hidden w-[70px] px-2 py-1 border-2 border-blue-500 rounded-md text-base font-bold text-center"
+                                                min="0" max="100" step="1" value="0">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Distance Location Input (Conditional) -->
+                            <div id="distanceSection" class="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                                <div class="flex items-center justify-between mb-3">
+                                    <label class="block text-sm font-bold text-gray-900">Lokasi Anda (Opsional)</label>
+                                    <button type="button" id="detectLocationBtn"
+                                        class="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 font-semibold">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z">
+                                            </path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        </svg>
+                                        Deteksi GPS
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs text-gray-600 mb-1">Latitude</label>
+                                        <input type="text" id="latitudeInput" name="latitude" placeholder="-7.2575"
+                                            class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-600 mb-1">Longitude</label>
+                                        <input type="text" id="longitudeInput" name="longitude"
+                                            placeholder="112.7521"
+                                            class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hidden Inputs for Weights -->
+                            <input type="hidden" name="weight_popularity" id="weight_popularity" value="0.5">
+                            <input type="hidden" name="weight_rating" id="weight_rating" value="0.3">
+                            <input type="hidden" name="weight_price" id="weight_price" value="0.2">
+                            <input type="hidden" name="weight_distance" id="weight_distance" value="0">
+
+                            <!-- Submit Button -->
+                            <button type="submit"
+                                class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform hover:scale-105 transition duration-300 flex items-center justify-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                Terapkan Prioritas
+                            </button>
+
+                            <!-- Reset Button -->
+                            <button type="button" onclick="resetCriteria()"
+                                class="w-full mt-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-6 rounded-lg transition duration-300">
+                                Reset ke Default
+                            </button>
+
+                            <!-- Warning for Advanced Mode -->
+                            <div id="advancedWarning" class="mt-3 text-center text-xs text-red-600 font-semibold"
+                                style="display: none;">
+                                ⚠️ Total harus 100%
+                            </div>
+                        </form>
                     </div>
                 </div>
-
-                <!-- Total Percentage Display -->
-                <div class="mt-6 p-4 bg-gray-50 border-2 border-gray-300 rounded-xl">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <svg class="w-6 h-6 text-gray-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                            </svg>
-                            <span class="text-lg font-bold text-gray-900">Total Bobot:</span>
-                        </div>
-                        <div class="flex items-center">
-                            <span id="totalPercentage" class="text-3xl font-black text-gray-900 mr-2">100</span>
-                            <span class="text-2xl font-bold text-gray-600">%</span>
-                        </div>
-                    </div>
-                    <div class="mt-3">
-                        <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
-                            <div id="totalBar" class="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-300" style="width: 100%"></div>
-                        </div>
-                        <p id="totalMessage" class="text-sm text-green-600 font-semibold mt-2 text-center">✓ Total bobot sudah benar (100%)</p>
-                    </div>
-                </div>
-            </form>
+            </div>
         </div>
+    </section>
 
-        <!-- Modal Footer -->
-        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
-            <button type="button" onclick="closeRecommendationModal()" class="px-6 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 transition duration-200">
-                Batal
-            </button>
-            <button type="submit" form="recommendationForm" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition duration-200">
-                Cari Rekomendasi
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- SAW Calculation Modal -->
-@if(isset($sawMode) && $sawMode && isset($sawCalculation))
-<div id="calculationModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-h-[95vh] overflow-hidden animate-slide-down" style="max-width: 95vw;">
-        <!-- Modal Header -->
-        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 sticky top-0 z-10">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-2xl font-bold mb-1">Detail Perhitungan SAW</h2>
-                    <p class="text-purple-100">Simple Additive Weighting - Analisis Lengkap</p>
+    <!-- SAW Calculation Modal -->
+    <div id="sawCalculationModal"
+        class="fixed inset-0 backdrop-blur-md bg-white/30 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden border border-gray-200">
+            <!-- Modal Header -->
+            <div
+                class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center">
+                    <svg class="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                        </path>
+                    </svg>
+                    <div>
+                        <h2 class="text-2xl font-bold">Hasil Perhitungan SAW</h2>
+                        <p class="text-sm text-purple-100">Simple Additive Weighting Algorithm</p>
+                    </div>
                 </div>
-                <button onclick="closeCalculationModal()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition duration-200">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                <button onclick="closeSAWCalculation()" class="text-white hover:text-purple-200 transition">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
                     </svg>
                 </button>
             </div>
-        </div>
 
-        <!-- Modal Body -->
-        <div class="overflow-y-auto" style="max-height: calc(95vh - 120px);">
-            @include('tourism.saw-calculation-content')
+            <!-- Modal Body -->
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <!-- Weights Info -->
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r">
+                    <h3 class="font-bold text-gray-900 mb-3">Bobot Kriteria</h3>
+                    <div id="weightsInfo" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Calculation Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                        <thead class="bg-gradient-to-r from-gray-100 to-gray-50">
+                            <tr>
+                                <th
+                                    class="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase border-r border-gray-200">
+                                    Rank</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase border-r border-gray-200">
+                                    Wisata</th>
+                                <th colspan="4"
+                                    class="px-4 py-2 text-center text-xs font-bold text-purple-700 uppercase bg-purple-50 border-r border-gray-200">
+                                    Nilai Asli</th>
+                                <th colspan="4"
+                                    class="px-4 py-2 text-center text-xs font-bold text-blue-700 uppercase bg-blue-50 border-r border-gray-200">
+                                    Normalisasi</th>
+                                <th colspan="4"
+                                    class="px-4 py-2 text-center text-xs font-bold text-green-700 uppercase bg-green-50 border-r border-gray-200">
+                                    Bobot × Nilai</th>
+                                <th rowspan="2"
+                                    class="px-4 py-3 text-center text-xs font-bold text-yellow-800 uppercase bg-yellow-100">
+                                    Skor SAW</th>
+                            </tr>
+                            <tr>
+                                <th class="px-3 py-2 border-r border-gray-200"></th>
+                                <th class="px-4 py-2 border-r border-gray-200"></th>
+                                <!-- Raw Values -->
+                                <th
+                                    class="px-3 py-2 text-center text-xs font-semibold text-purple-600 bg-purple-50 border-r border-gray-200">
+                                    Pop</th>
+                                <th
+                                    class="px-3 py-2 text-center text-xs font-semibold text-purple-600 bg-purple-50 border-r border-gray-200">
+                                    Rat</th>
+                                <th
+                                    class="px-3 py-2 text-center text-xs font-semibold text-purple-600 bg-purple-50 border-r border-gray-200">
+                                    Hrg</th>
+                                <th class="px-3 py-2 text-center text-xs font-semibold text-purple-600 bg-purple-50 border-r border-gray-200"
+                                    id="rawDistHeader" style="display: none;">Jrk</th>
+                                <!-- Normalized -->
+                                <th
+                                    class="px-3 py-2 text-center text-xs font-semibold text-blue-600 bg-blue-50 border-r border-gray-200">
+                                    Pop</th>
+                                <th
+                                    class="px-3 py-2 text-center text-xs font-semibold text-blue-600 bg-blue-50 border-r border-gray-200">
+                                    Rat</th>
+                                <th
+                                    class="px-3 py-2 text-center text-xs font-semibold text-blue-600 bg-blue-50 border-r border-gray-200">
+                                    Hrg</th>
+                                <th class="px-3 py-2 text-center text-xs font-semibold text-blue-600 bg-blue-50 border-r border-gray-200"
+                                    id="normDistHeader" style="display: none;">Jrk</th>
+                                <!-- Weighted -->
+                                <th
+                                    class="px-3 py-2 text-center text-xs font-semibold text-green-600 bg-green-50 border-r border-gray-200">
+                                    Pop</th>
+                                <th
+                                    class="px-3 py-2 text-center text-xs font-semibold text-green-600 bg-green-50 border-r border-gray-200">
+                                    Rat</th>
+                                <th
+                                    class="px-3 py-2 text-center text-xs font-semibold text-green-600 bg-green-50 border-r border-gray-200">
+                                    Hrg</th>
+                                <th class="px-3 py-2 text-center text-xs font-semibold text-green-600 bg-green-50 border-r border-gray-200"
+                                    id="weightDistHeader" style="display: none;">Jrk</th>
+                            </tr>
+                        </thead>
+                        <tbody id="calculationTableBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Formula Info -->
+                <div class="mt-6 bg-gray-50 p-4 rounded-lg">
+                    <h3 class="font-bold text-gray-900 mb-2">Formula SAW</h3>
+                    <div class="text-sm text-gray-700">
+                        <p class="mb-2"><strong>1. Normalisasi:</strong></p>
+                        <ul class="ml-4 mb-3 space-y-1">
+                            <li>• <strong>Benefit (Popularity, Rating):</strong> r<sub>ij</sub> = x<sub>ij</sub> /
+                                max(x<sub>ij</sub>)</li>
+                            <li>• <strong>Cost (Price, Distance):</strong> r<sub>ij</sub> = min(x<sub>ij</sub>) /
+                                x<sub>ij</sub></li>
+                        </ul>
+                        <p class="mb-2"><strong>2. Skor SAW:</strong></p>
+                        <p class="ml-4 font-mono">V<sub>i</sub> = Σ (w<sub>j</sub> × r<sub>ij</sub>)</p>
+                        <p class="mt-2 text-xs text-gray-600">Dimana: V<sub>i</sub> = Skor alternatif ke-i, w<sub>j</sub> =
+                            Bobot kriteria ke-j, r<sub>ij</sub> = Nilai normalisasi</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-gray-100 px-6 py-4 flex justify-end">
+                <button onclick="closeSAWCalculation()"
+                    class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300">
+                    Tutup
+                </button>
+            </div>
         </div>
     </div>
-</div>
-@endif
+
 @endsection
+
 @section('scripts')
-<script>
-    // Auto submit form on filter change
-    document.querySelectorAll('select[name="category"], select[name="sort"]').forEach(select => {
-        select.addEventListener('change', function() {
-            this.form.submit();
-        });
-    });
+    <script>
+        // SAW data from server (will be updated by AJAX)
+        let sawCalculationData = @json([
+            'weights' => $weights ?? [],
+            'calculations' => $calculations ?? [],
+        ]);
 
-    // Modal Functions
-    function openRecommendationModal() {
-        document.getElementById('recommendationModal').classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeRecommendationModal() {
-        document.getElementById('recommendationModal').classList.add('hidden');
-        document.body.style.overflow = 'auto';
-    }
-
-    function openCalculationModal() {
-        document.getElementById('calculationModal').classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeCalculationModal() {
-        document.getElementById('calculationModal').classList.add('hidden');
-        document.body.style.overflow = 'auto';
-    }
-
-    // Close modal on outside click
-    document.getElementById('recommendationModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeRecommendationModal();
-        }
-    });
-
-    @if($sawMode && $sawCalculation)
-    document.getElementById('calculationModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeCalculationModal();
-        }
-    });
-    @endif
-
-    // Close modal on ESC key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeRecommendationModal();
-            @if($sawMode && $sawCalculation)
-            closeCalculationModal();
-            @endif
-        }
-    });
-
-    // Toggle Category Weight Input
-    function toggleCategoryWeight(categoryId) {
-        const checkbox = document.querySelector(`input[data-category-id="${categoryId}"]`);
-        const weightInput = document.getElementById(`weight_category_${categoryId}`);
-
-        if (checkbox.checked) {
-            weightInput.disabled = false;
-            weightInput.classList.remove('disabled:bg-gray-100', 'disabled:text-gray-400');
-            weightInput.classList.add('bg-white', 'text-gray-900');
-        } else {
-            weightInput.disabled = true;
-            weightInput.value = 0;
-            weightInput.classList.add('disabled:bg-gray-100', 'disabled:text-gray-400');
-            weightInput.classList.remove('bg-white', 'text-gray-900');
-        }
-
-        calculateTotal();
-    }
-
-    // Calculate Total Percentage
-    function calculateTotal() {
-        const rating = parseInt(document.querySelector('input[name="weight_rating"]').value) || 0;
-        const price = parseInt(document.querySelector('input[name="weight_price"]').value) || 0;
-        const distance = parseInt(document.querySelector('input[name="weight_distance"]').value) || 0;
-
-        // Sum all category weights
-        let categoryTotal = 0;
-        document.querySelectorAll('.category-weight').forEach(input => {
-            if (!input.disabled) {
-                categoryTotal += parseInt(input.value) || 0;
+        // SAW Calculation Modal Functions
+        function showSAWCalculation() {
+            if (!sawCalculationData.calculations || sawCalculationData.calculations.length === 0) {
+                showNotification('Belum ada hasil perhitungan SAW. Silakan terapkan filter SAW terlebih dahulu.', 'error');
+                return;
             }
-        });
 
-        const total = rating + price + distance + categoryTotal;
+            // Show loading overlay
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.style.display = 'flex';
 
-        // Update display
-        document.getElementById('totalPercentage').textContent = total;
-        document.getElementById('totalBar').style.width = Math.min(total, 100) + '%';
+            // Small delay to show loading
+            setTimeout(() => {
+                populateSAWModal(sawCalculationData);
 
-        // Update message and styling
-        const messageEl = document.getElementById('totalMessage');
-        const barEl = document.getElementById('totalBar');
+                // Hide loading overlay
+                loadingOverlay.style.display = 'none';
 
-        if (total === 100) {
-            messageEl.textContent = '✓ Total bobot sudah benar (100%)';
-            messageEl.className = 'text-sm text-green-600 font-semibold mt-2 text-center';
-            barEl.className = 'h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300';
-        } else if (total < 100) {
-            messageEl.textContent = '⚠ Total bobot kurang dari 100% (masih kurang ' + (100 - total) + '%)';
-            messageEl.className = 'text-sm text-yellow-600 font-semibold mt-2 text-center';
-            barEl.className = 'h-full bg-gradient-to-r from-yellow-500 to-orange-600 transition-all duration-300';
-        } else {
-            messageEl.textContent = '✗ Total bobot lebih dari 100% (kelebihan ' + (total - 100) + '%)';
-            messageEl.className = 'text-sm text-red-600 font-semibold mt-2 text-center';
-            barEl.className = 'h-full bg-gradient-to-r from-red-500 to-rose-600 transition-all duration-300';
+                // Show modal with flex display
+                const modal = document.getElementById('sawCalculationModal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }, 300);
         }
-    }
 
-    // Form Validation on Submit
-    document.getElementById('recommendationForm').addEventListener('submit', function(e) {
-        const rating = parseInt(document.querySelector('input[name="weight_rating"]').value) || 0;
-        const price = parseInt(document.querySelector('input[name="weight_price"]').value) || 0;
-        const distance = parseInt(document.querySelector('input[name="weight_distance"]').value) || 0;
+        function closeSAWCalculation() {
+            const modal = document.getElementById('sawCalculationModal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
 
-        // Sum all category weights
-        let categoryTotal = 0;
-        document.querySelectorAll('.category-weight').forEach(input => {
-            if (!input.disabled) {
-                categoryTotal += parseInt(input.value) || 0;
-            }
+        function populateSAWModal(sawData) {
+            // Populate weights info
+            const weightsInfo = document.getElementById('weightsInfo');
+            const weights = sawData.weights || {};
+
+            const criteriaLabels = {
+                'popularity': 'Popularitas',
+                'rating': 'Rating',
+                'price': 'Harga',
+                'distance': 'Jarak'
+            };
+
+            weightsInfo.innerHTML = '';
+
+            // Display all weights
+            Object.keys(weights).forEach(key => {
+                const label = criteriaLabels[key] || key;
+                const weight = (weights[key] * 100).toFixed(0);
+                weightsInfo.innerHTML += `
+                <div class="flex items-center">
+                    <span class="font-semibold text-gray-700 mr-2">${label}:</span>
+                    <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">${weight}%</span>
+                </div>
+            `;
+            });
+
+            // Populate calculation table
+            const tableBody = document.getElementById('calculationTableBody');
+            tableBody.innerHTML = '';
+
+            // Check if distance is used
+            const hasDistance = sawData.calculations.some(item => item.raw_values.distance !== undefined);
+
+            // Show/hide distance headers
+            const distanceHeaders = ['rawDistHeader', 'normDistHeader', 'weightDistHeader'];
+            distanceHeaders.forEach(id => {
+                const header = document.getElementById(id);
+                if (header) {
+                    header.style.display = hasDistance ? '' : 'none';
+                }
+            });
+
+            sawData.calculations.forEach((item, index) => {
+                const rank = index + 1;
+                const rawValues = item.raw_values;
+                const normalized = item.normalized;
+                const weighted = item.weighted;
+
+                // Create row with ranking badge
+                let rankBadge = '';
+                if (rank === 1) {
+                    rankBadge =
+                        '<span class="inline-flex items-center justify-center w-10 h-10 bg-yellow-400 text-yellow-900 rounded-full font-bold text-lg">🥇</span>';
+                } else if (rank === 2) {
+                    rankBadge =
+                        '<span class="inline-flex items-center justify-center w-10 h-10 bg-gray-300 text-gray-700 rounded-full font-bold text-lg">🥈</span>';
+                } else if (rank === 3) {
+                    rankBadge =
+                        '<span class="inline-flex items-center justify-center w-10 h-10 bg-orange-300 text-orange-700 rounded-full font-bold text-lg">🥉</span>';
+                } else {
+                    rankBadge =
+                        `<span class="inline-flex items-center justify-center w-10 h-10 bg-gray-100 text-gray-600 rounded-full font-bold">${rank}</span>`;
+                }
+
+                const row = `
+                <tr class="border-t hover:bg-gray-50 transition">
+                    <td class="px-3 py-4 text-center border-r border-gray-200">${rankBadge}</td>
+                    <td class="px-4 py-4 border-r border-gray-200">
+                        <div class="font-semibold text-gray-900">${item.tourism.name}</div>
+                        <div class="text-xs text-gray-500">${item.city || ''}</div>
+                    </td>
+                    <!-- Raw Values -->
+                    <td class="px-3 py-4 text-center text-sm bg-purple-50 border-r border-gray-200">${rawValues.popularity || 0}</td>
+                    <td class="px-3 py-4 text-center text-sm bg-purple-50 border-r border-gray-200">${parseFloat(rawValues.rating || 0).toFixed(1)}</td>
+                    <td class="px-3 py-4 text-center text-sm bg-purple-50 border-r border-gray-200">${parseInt(rawValues.price || 0).toLocaleString('id-ID')}</td>
+                    ${hasDistance ? `<td class="px-3 py-4 text-center text-sm bg-purple-50 border-r border-gray-200">${rawValues.distance ? parseFloat(rawValues.distance).toFixed(2) : '-'}</td>` : ''}
+                    <!-- Normalized -->
+                    <td class="px-3 py-4 text-center text-sm bg-blue-50 border-r border-gray-200">${parseFloat(normalized.popularity || 0).toFixed(4)}</td>
+                    <td class="px-3 py-4 text-center text-sm bg-blue-50 border-r border-gray-200">${parseFloat(normalized.rating || 0).toFixed(4)}</td>
+                    <td class="px-3 py-4 text-center text-sm bg-blue-50 border-r border-gray-200">${parseFloat(normalized.price || 0).toFixed(4)}</td>
+                    ${hasDistance ? `<td class="px-3 py-4 text-center text-sm bg-blue-50 border-r border-gray-200">${normalized.distance ? parseFloat(normalized.distance).toFixed(4) : '-'}</td>` : ''}
+                    <!-- Weighted -->
+                    <td class="px-3 py-4 text-center text-sm bg-green-50 border-r border-gray-200">${parseFloat(weighted.popularity || 0).toFixed(4)}</td>
+                    <td class="px-3 py-4 text-center text-sm bg-green-50 border-r border-gray-200">${parseFloat(weighted.rating || 0).toFixed(4)}</td>
+                    <td class="px-3 py-4 text-center text-sm bg-green-50 border-r border-gray-200">${parseFloat(weighted.price || 0).toFixed(4)}</td>
+                    ${hasDistance ? `<td class="px-3 py-4 text-center text-sm bg-green-50 border-r border-gray-200">${weighted.distance ? parseFloat(weighted.distance).toFixed(4) : '-'}</td>` : ''}
+                    <!-- SAW Score -->
+                    <td class="px-4 py-4 text-center bg-yellow-50 border-gray-200">
+                        <div class="font-bold text-lg text-yellow-900">${parseFloat(item.saw_score).toFixed(4)}</div>
+                    </td>
+                </tr>
+            `;
+
+                tableBody.innerHTML += row;
+            });
+        }
+
+        // Drag and Drop Functionality
+        let draggedElement = null;
+        let advancedMode = false;
+        let distanceEnabled = false;
+        let isLoading = false;
+
+        // Pagination variables
+        let currentPage = 1;
+        let itemsPerPage = 9;
+        let totalItems = 0;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDragAndDrop();
+            updateWeights();
+            updateMoveUpButtons();
+
+            // Filter functionality with AJAX
+            document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 500));
+            document.getElementById('categoryFilter').addEventListener('change', applyFilters);
+
+            // SAW Form with AJAX
+            document.getElementById('sawForm').addEventListener('submit', handleSAWSubmit);
+
+            // Monitor location inputs
+            document.getElementById('latitudeInput').addEventListener('input', checkLocationInputs);
+            document.getElementById('longitudeInput').addEventListener('input', checkLocationInputs);
+
+            // Detect location button
+            document.getElementById('detectLocationBtn').addEventListener('click', detectLocation);
+
+            // Advanced mode weight inputs
+            document.querySelectorAll('.criteria-item').forEach(item => {
+                const input = item.querySelector('.weight-input-field');
+                if (input) {
+                    input.addEventListener('input', handleWeightInputChange);
+                }
+            });
+
+            // Initialize pagination
+            initializePagination();
         });
 
-        const total = rating + price + distance + categoryTotal;
+        function checkLocationInputs() {
+            const lat = document.getElementById('latitudeInput').value.trim();
+            const lng = document.getElementById('longitudeInput').value.trim();
+            const distanceCriteria = document.getElementById('distanceCriteria');
 
-        if (total !== 100) {
-            e.preventDefault();
+            if (lat && lng) {
+                // Show distance criteria
+                if (!distanceEnabled) {
+                    distanceEnabled = true;
+                    distanceCriteria.style.display = 'block';
 
-            // Show alert with appropriate message
-            let message = '';
-            if (total < 100) {
-                message = `Total bobot tidak valid!\n\nTotal bobot saat ini: ${total}%\nMasih kurang: ${100 - total}%\n\nTotal bobot harus tepat 100% untuk melanjutkan.`;
+                    // Add animation
+                    setTimeout(() => {
+                        distanceCriteria.style.opacity = '0';
+                        distanceCriteria.style.transform = 'translateY(-10px)';
+                        setTimeout(() => {
+                            distanceCriteria.style.transition = 'all 0.3s ease';
+                            distanceCriteria.style.opacity = '1';
+                            distanceCriteria.style.transform = 'translateY(0)';
+                        }, 10);
+                    }, 10);
+
+                    // Re-init drag and drop
+                    initializeDragAndDrop();
+                    updateWeights();
+                    updateMoveUpButtons();
+                }
             } else {
-                message = `Total bobot tidak valid!\n\nTotal bobot saat ini: ${total}%\nKelebihan: ${total - 100}%\n\nTotal bobot harus tepat 100% untuk melanjutkan.`;
+                // Hide distance criteria
+                if (distanceEnabled) {
+                    distanceEnabled = false;
+                    distanceCriteria.style.display = 'none';
+
+                    updateWeights();
+                    updateMoveUpButtons();
+                }
             }
+        }
 
-            alert(message);
+        function toggleAdvancedMode() {
+            advancedMode = !advancedMode;
+            const advancedIcon = document.getElementById('advancedIcon');
+            const advancedText = document.getElementById('advancedText');
+            const advancedInfo = document.getElementById('advancedInfo');
+            const advancedWarning = document.getElementById('advancedWarning');
 
-            // Scroll to total display
-            document.getElementById('totalPercentage').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (advancedMode) {
+                // Show advanced mode
+                advancedIcon.style.transform = 'rotate(90deg)';
+                advancedText.textContent = 'Mode Normal (Otomatis)';
+                advancedInfo.style.display = 'block';
+                advancedWarning.style.display = 'block';
 
+                // Show input fields, hide labels (only for visible criteria)
+                document.querySelectorAll('.criteria-item').forEach(item => {
+                    if (item.style.display !== 'none') {
+                        const label = item.querySelector('.weight-label-text');
+                        const input = item.querySelector('.weight-input-field');
+                        if (label) label.classList.add('hidden');
+                        if (input) input.classList.remove('hidden');
+                    }
+                });
+
+                // Disable drag and drop
+                document.querySelectorAll('.criteria-item').forEach(item => {
+                    if (item.getAttribute('draggable') === 'true') {
+                        item.setAttribute('draggable', 'false');
+                        item.classList.remove('cursor-move');
+                        item.classList.add('cursor-default');
+                    }
+                });
+            } else {
+                // Show normal mode
+                advancedIcon.style.transform = 'rotate(0deg)';
+                advancedText.textContent = 'Mode Lanjutan (Atur Nilai Manual)';
+                advancedInfo.style.display = 'none';
+                advancedWarning.style.display = 'none';
+
+                // Show labels, hide input fields
+                document.querySelectorAll('.criteria-item').forEach(item => {
+                    const label = item.querySelector('.weight-label-text');
+                    const input = item.querySelector('.weight-input-field');
+                    if (label) label.classList.remove('hidden');
+                    if (input) input.classList.add('hidden');
+                });
+
+                // Enable drag and drop (only for visible criteria)
+                document.querySelectorAll('.criteria-item').forEach(item => {
+                    if (item.style.display !== 'none') {
+                        item.setAttribute('draggable', 'true');
+                        item.classList.remove('cursor-default');
+                        item.classList.add('cursor-move');
+                    }
+                });
+
+                // Recalculate weights based on order
+                updateWeights();
+                updateMoveUpButtons();
+            }
+        }
+
+        function handleWeightInputChange(e) {
+            const input = e.target;
+            let value = parseInt(input.value) || 0;
+
+            // Clamp value between 0-100
+            if (value < 0) value = 0;
+            if (value > 100) value = 100;
+            input.value = value;
+
+            // Update the corresponding hidden input
+            const criteriaItem = input.closest('.criteria-item');
+            const criterion = criteriaItem.dataset.criterion;
+            const weight = value / 100;
+            document.getElementById('weight_' + criterion).value = weight;
+
+            // Check if total is 100%
+            checkTotalWeight();
+        }
+
+        function checkTotalWeight() {
+            // Only count visible criteria
+            const visibleInputs = Array.from(document.querySelectorAll('.criteria-item')).filter(item => {
+                return item.style.display !== 'none';
+            }).map(item => item.querySelector('.weight-input-field'));
+
+            const total = visibleInputs.reduce((sum, input) => sum + (parseInt(input.value) || 0), 0);
+
+            const warning = document.getElementById('advancedWarning');
+            const submitButton = document.querySelector('button[type="submit"]');
+
+            if (total !== 100) {
+                warning.textContent = `⚠️ Total: ${total}% (harus 100%)`;
+                warning.style.color = '#dc2626';
+                submitButton.disabled = true;
+                submitButton.style.opacity = '0.5';
+            } else {
+                warning.textContent = '✓ Total: 100% (Benar!)';
+                warning.style.color = '#059669';
+                submitButton.disabled = false;
+                submitButton.style.opacity = '1';
+            }
+        }
+
+        function initializeDragAndDrop() {
+            const criteriaItems = document.querySelectorAll('.criteria-item');
+
+            criteriaItems.forEach(item => {
+                // Skip hidden items
+                if (item.style.display === 'none') {
+                    return;
+                }
+
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragend', handleDragEnd);
+                item.addEventListener('dragenter', handleDragEnter);
+                item.addEventListener('dragleave', handleDragLeave);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedElement = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
             return false;
         }
-    });
 
-    // Detect GPS Location
-    function detectLocation() {
-        if (!navigator.geolocation) {
-            alert('Geolocation tidak didukung oleh browser Anda.');
-            return;
+        function handleDragEnter(e) {
+            if (this !== draggedElement) {
+                this.classList.add('drag-over');
+            }
         }
 
-        // Show loading state
-        const button = event.target.closest('button');
-        const originalHTML = button.innerHTML;
-        button.disabled = true;
-        button.innerHTML = `
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+
+            if (draggedElement !== this) {
+                const container = document.getElementById('criteriaContainer');
+                const allItems = Array.from(container.querySelectorAll('.criteria-item'));
+                const draggedIndex = allItems.indexOf(draggedElement);
+                const targetIndex = allItems.indexOf(this);
+
+                if (draggedIndex < targetIndex) {
+                    this.parentNode.insertBefore(draggedElement, this.nextSibling);
+                } else {
+                    this.parentNode.insertBefore(draggedElement, this);
+                }
+
+                updateWeights();
+                updateMoveUpButtons();
+            }
+
+            this.classList.remove('drag-over');
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.criteria-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+        }
+
+        function moveUp(button) {
+            const criteriaItem = button.closest('.criteria-item');
+            const container = document.getElementById('criteriaContainer');
+            const allItems = Array.from(container.querySelectorAll('.criteria-item'));
+
+            // Filter only visible items
+            const visibleItems = allItems.filter(item => item.style.display !== 'none');
+            const currentIndex = visibleItems.indexOf(criteriaItem);
+
+            // Can't move up if already at the top
+            if (currentIndex <= 0) {
+                return;
+            }
+
+            // Add animation class
+            criteriaItem.style.transition = 'all 0.3s ease';
+            criteriaItem.style.transform = 'translateY(-10px)';
+
+            setTimeout(() => {
+                // Move the item before its previous sibling (visible item)
+                const previousVisibleItem = visibleItems[currentIndex - 1];
+                container.insertBefore(criteriaItem, previousVisibleItem);
+
+                // Reset animation
+                criteriaItem.style.transform = 'translateY(0)';
+
+                // Update weights and button states
+                updateWeights();
+                updateMoveUpButtons();
+            }, 150);
+        }
+
+        function updateMoveUpButtons() {
+            const container = document.getElementById('criteriaContainer');
+            const allItems = Array.from(container.querySelectorAll('.criteria-item'));
+            const visibleItems = allItems.filter(item => item.style.display !== 'none');
+
+            // Update all buttons
+            visibleItems.forEach((item, index) => {
+                const button = item.querySelector('.move-up-btn');
+                if (button) {
+                    if (index === 0) {
+                        // First item - disable button
+                        button.classList.add('disabled');
+                    } else {
+                        // Other items - enable button
+                        button.classList.remove('disabled');
+                    }
+                }
+            });
+        }
+
+        function updateWeights() {
+            if (advancedMode) {
+                // In advanced mode, don't auto-update weights
+                checkTotalWeight();
+                return;
+            }
+
+            const criteriaItems = Array.from(document.querySelectorAll('.criteria-item'));
+
+            // Filter out hidden/disabled criteria
+            const activeCriteria = criteriaItems.filter(item => {
+                return item.style.display !== 'none';
+            });
+
+            // Calculate weights based on rank (descending priority)
+            const totalActive = activeCriteria.length;
+            const weights = [];
+
+            // Generate weights: 50%, 30%, 20%, 0% for 4 criteria
+            if (totalActive === 3) {
+                weights.push(0.5, 0.3, 0.2); // 50%, 30%, 20%
+            } else if (totalActive === 4) {
+                weights.push(0.5, 0.3, 0.2, 0.0); // 50%, 30%, 20%, 0%
+            } else if (totalActive === 2) {
+                weights.push(0.7, 0.3); // 70%, 30%
+            } else if (totalActive === 1) {
+                weights.push(1.0); // 100%
+            }
+
+            // Reset all criteria weights to 0 first
+            criteriaItems.forEach((item) => {
+                const criterion = item.dataset.criterion;
+                const weightLabel = item.querySelector('.weight-label-text');
+                const weightInput = item.querySelector('.weight-input-field');
+
+                if (weightLabel) weightLabel.textContent = '0%';
+                if (weightInput) weightInput.value = 0;
+                document.getElementById('weight_' + criterion).value = 0;
+            });
+
+            // Apply weights to active criteria based on their order
+            activeCriteria.forEach((item, index) => {
+                const criterion = item.dataset.criterion;
+                const weight = weights[index] || 0;
+                const weightPercent = Math.round(weight * 100);
+
+                const weightLabel = item.querySelector('.weight-label-text');
+                const weightInput = item.querySelector('.weight-input-field');
+
+                if (weightLabel) weightLabel.textContent = weightPercent + '%';
+                if (weightInput) weightInput.value = weightPercent;
+                document.getElementById('weight_' + criterion).value = weight;
+
+                // Update rank badge
+                const rank = index + 1;
+                const rankBadge = item.querySelector('.rank-badge');
+                rankBadge.textContent = rank;
+
+                // Remove all rank classes and add base classes
+                rankBadge.className =
+                    'absolute -top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10 rank-badge';
+
+                // Add specific gradient based on rank
+                if (index === 0) {
+                    rankBadge.classList.add('bg-gradient-to-br', 'from-amber-400', 'to-amber-500',
+                        'text-amber-900');
+                } else if (index === 1) {
+                    rankBadge.classList.add('bg-gradient-to-br', 'from-blue-500', 'to-blue-600', 'text-white');
+                } else if (index === 2) {
+                    rankBadge.classList.add('bg-gradient-to-br', 'from-green-500', 'to-green-600', 'text-white');
+                } else if (index === 3) {
+                    rankBadge.classList.add('bg-gradient-to-br', 'from-purple-500', 'to-purple-600', 'text-white');
+                }
+
+                // Update data attribute
+                item.dataset.rank = rank;
+            });
+
+            // Update move up buttons
+            updateMoveUpButtons();
+        }
+
+        function resetCriteria() {
+            // Reset to normal mode
+            if (advancedMode) {
+                toggleAdvancedMode();
+            }
+
+            const container = document.getElementById('criteriaContainer');
+            const items = Array.from(container.querySelectorAll('.criteria-item'));
+
+            // Sort by original criterion order: popularity, rating, price, distance
+            const order = ['popularity', 'rating', 'price', 'distance'];
+            items.sort((a, b) => {
+                return order.indexOf(a.dataset.criterion) - order.indexOf(b.dataset.criterion);
+            });
+
+            // Reappend in order
+            items.forEach(item => container.appendChild(item));
+
+            // Clear location inputs
+            document.getElementById('latitudeInput').value = '';
+            document.getElementById('longitudeInput').value = '';
+
+            // Trigger location check to disable distance
+            checkLocationInputs();
+
+            updateWeights();
+            updateMoveUpButtons();
+        }
+
+        // Detect GPS Location
+        function detectLocation(event) {
+            if (!navigator.geolocation) {
+                alert('Geolocation tidak didukung oleh browser Anda.');
+                return;
+            }
+
+            const button = event.target.closest('button');
+            const originalHTML = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = `
             <svg class="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -752,89 +1150,334 @@
             Mendeteksi...
         `;
 
-        navigator.geolocation.getCurrentPosition(
-            function(position) {
-                // Success - populate the input fields
-                const latitude = position.coords.latitude.toFixed(6);
-                const longitude = position.coords.longitude.toFixed(6);
-                
-                document.getElementById('latitudeInput').value = latitude;
-                document.getElementById('longitudeInput').value = longitude;
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const latitude = position.coords.latitude.toFixed(6);
+                    const longitude = position.coords.longitude.toFixed(6);
 
-                // Reset button
-                button.disabled = false;
-                button.innerHTML = originalHTML;
+                    document.getElementById('latitudeInput').value = latitude;
+                    document.getElementById('longitudeInput').value = longitude;
 
-                // Show success message
-                const messageDiv = document.createElement('div');
-                messageDiv.className = 'text-xs text-green-600 mt-1 flex items-center';
-                messageDiv.innerHTML = `
-                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                    </svg>
-                    Lokasi berhasil terdeteksi!
-                `;
-                
-                // Insert message and remove after 3 seconds
-                button.parentElement.appendChild(messageDiv);
-                setTimeout(() => messageDiv.remove(), 3000);
-            },
-            function(error) {
-                // Error handling
-                button.disabled = false;
-                button.innerHTML = originalHTML;
+                    // Trigger location check to show distance criteria
+                    checkLocationInputs();
 
-                let errorMessage = 'Gagal mendapatkan lokasi. ';
-                switch(error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMessage += 'Izin akses lokasi ditolak. Mohon aktifkan izin lokasi di browser Anda.';
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMessage += 'Informasi lokasi tidak tersedia.';
-                        break;
-                    case error.TIMEOUT:
-                        errorMessage += 'Waktu permintaan lokasi habis.';
-                        break;
-                    default:
-                        errorMessage += 'Terjadi kesalahan yang tidak diketahui.';
-                        break;
+                    button.disabled = false;
+                    button.innerHTML = originalHTML;
+
+                    showNotification('Lokasi berhasil terdeteksi!', 'success');
+                },
+                function(error) {
+                    button.disabled = false;
+                    button.innerHTML = originalHTML;
+
+                    let errorMessage = 'Gagal mendapatkan lokasi. ';
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage += 'Izin akses lokasi ditolak.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage += 'Informasi lokasi tidak tersedia.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage += 'Waktu permintaan lokasi habis.';
+                            break;
+                    }
+                    alert(errorMessage);
+                }, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
                 }
-                alert(errorMessage);
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
+            );
+        }
+
+        // AJAX Filter functions
+        function applyFilters() {
+            if (isLoading) return;
+
+            const search = document.getElementById('searchInput').value;
+            const category = document.getElementById('categoryFilter').value;
+
+            const params = new URLSearchParams();
+            if (search) params.append('search', search);
+            if (category) params.append('category', category);
+
+            // Add current weights to maintain SAW ranking
+            params.append('weight_popularity', document.getElementById('weight_popularity').value);
+            params.append('weight_rating', document.getElementById('weight_rating').value);
+            params.append('weight_price', document.getElementById('weight_price').value);
+            params.append('weight_distance', document.getElementById('weight_distance').value);
+
+            const lat = document.getElementById('latitudeInput').value.trim();
+            const lng = document.getElementById('longitudeInput').value.trim();
+            if (lat && lng) {
+                params.append('latitude', lat);
+                params.append('longitude', lng);
             }
-        );
-    }
 
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        calculateTotal();
+            loadTourismData('{{ route('tourism.index') }}?' + params.toString(), 'Filter berhasil diterapkan!');
+        }
 
-        // Auto open modal if there's an error (from backend validation)
-        @if(session('error'))
-            openRecommendationModal();
-        @endif
-    });
+        function handleSAWSubmit(e) {
+            e.preventDefault();
 
-    // Add to Trip Cart functionality
-    $(document).ready(function() {
-        $('.add-to-trip-cart').on('click', function(e) {
+            if (isLoading) return;
+
+            const formData = new FormData(e.target);
+            const params = new URLSearchParams(formData);
+
+            // Add current search and category filters
+            const search = document.getElementById('searchInput').value;
+            const category = document.getElementById('categoryFilter').value;
+            if (search) params.set('search', search);
+            if (category) params.set('category', category);
+
+            loadTourismData('{{ route('tourism.index') }}?' + params.toString(), 'Prioritas berhasil diterapkan!');
+        }
+
+        function loadTourismData(url, successMessage = 'Data berhasil diperbarui!') {
+            if (isLoading) return;
+
+            isLoading = true;
+            const tourismCardsContainer = document.getElementById('tourismCardsContainer');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+
+            // Show loading overlay
+            loadingOverlay.style.display = 'flex';
+
+            // Fetch new data using AJAX
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                success: function(data) {
+                    // Update SAW calculation data for modal
+                    sawCalculationData = {
+                        weights: data.weights || {},
+                        calculations: data.calculations || []
+                    };
+
+                    // Update tourism cards HTML
+                    if (data.html && tourismCardsContainer) {
+                        // Fade out old content
+                        $(tourismCardsContainer).css({
+                            'opacity': '0',
+                            'transition': 'opacity 0.3s ease'
+                        });
+
+                        setTimeout(function() {
+                            tourismCardsContainer.innerHTML = data.html;
+
+                            // Reinitialize trip cart buttons
+                            $('.add-to-trip-cart').off('click').on('click', handleAddToTripCart);
+
+                            // Reinitialize pagination
+                            currentPage = 1;
+                            initializePagination();
+
+                            // Update total count
+                            const totalCount = document.getElementById('totalCount');
+                            if (totalCount && data.total) {
+                                totalCount.textContent = data.total;
+                            }
+
+                            // Fade in new content
+                            $(tourismCardsContainer).css('opacity', '1');
+                        }, 150);
+                    }
+
+                    // Show success notification
+                    showNotification(successMessage, 'success');
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error:', error);
+                    showNotification('Gagal memuat data. Silakan coba lagi.', 'error');
+                },
+                complete: function() {
+                    isLoading = false;
+                    loadingOverlay.style.display = 'none';
+                }
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('categoryFilter').value = '';
+            applyFilters();
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // ==================== PAGINATION FUNCTIONS ====================
+
+        function initializePagination() {
+            const cards = document.querySelectorAll('.tourism-card');
+            totalItems = cards.length;
+            currentPage = 1;
+
+            if (totalItems > 0) {
+                updatePagination();
+            }
+        }
+
+        function updatePagination() {
+            const cards = document.querySelectorAll('.tourism-card');
+            totalItems = cards.length;
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+            // Update counts
+            document.getElementById('totalCount').textContent = totalItems;
+            document.getElementById('pageTotal').textContent = totalItems;
+
+            // Show/hide cards based on current page
+            cards.forEach((card, index) => {
+                const start = (currentPage - 1) * itemsPerPage;
+                const end = start + itemsPerPage;
+
+                if (index >= start && index < end) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Update showing count
+            const start = (currentPage - 1) * itemsPerPage + 1;
+            const end = Math.min(currentPage * itemsPerPage, totalItems);
+            document.getElementById('showingCount').textContent = end;
+            document.getElementById('pageStart').textContent = start;
+            document.getElementById('pageEnd').textContent = end;
+
+            // Generate pagination buttons
+            generatePaginationButtons(totalPages);
+
+            // Show/hide pagination container
+            const paginationContainer = document.getElementById('paginationContainer');
+            if (totalPages <= 1) {
+                paginationContainer.style.display = 'none';
+            } else {
+                paginationContainer.style.display = 'block';
+            }
+
+            // Scroll to top smoothly
+            // document.querySelector('#tourismCardsContainer').scrollIntoView({ 
+            //     behavior: 'smooth', 
+            //     block: 'start' 
+            // });
+        }
+
+        function generatePaginationButtons(totalPages) {
+            const container = document.getElementById('paginationButtons');
+            container.innerHTML = '';
+
+            if (totalPages <= 1) return;
+
+            // Previous button
+            const prevBtn = createPaginationButton('‹ Prev', currentPage - 1, currentPage === 1);
+            container.appendChild(prevBtn);
+
+            // Page numbers
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage < maxButtons - 1) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            // First page + ellipsis
+            if (startPage > 1) {
+                container.appendChild(createPaginationButton('1', 1, false));
+                if (startPage > 2) {
+                    container.appendChild(createEllipsis());
+                }
+            }
+
+            // Page number buttons
+            for (let i = startPage; i <= endPage; i++) {
+                container.appendChild(createPaginationButton(i.toString(), i, false, i === currentPage));
+            }
+
+            // Ellipsis + last page
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    container.appendChild(createEllipsis());
+                }
+                container.appendChild(createPaginationButton(totalPages.toString(), totalPages, false));
+            }
+
+            // Next button
+            const nextBtn = createPaginationButton('Next ›', currentPage + 1, currentPage === totalPages);
+            container.appendChild(nextBtn);
+        }
+
+        function createPaginationButton(text, page, disabled = false, active = false) {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.className = 'px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ';
+
+            if (disabled) {
+                button.className += 'bg-gray-200 text-gray-400 cursor-not-allowed';
+                button.disabled = true;
+            } else if (active) {
+                button.className += 'bg-blue-600 text-white shadow-lg';
+            } else {
+                button.className += 'bg-white text-blue-600 border border-blue-600 hover:bg-blue-50';
+                button.onclick = () => goToPage(page);
+            }
+
+            return button;
+        }
+
+        function createEllipsis() {
+            const span = document.createElement('span');
+            span.textContent = '...';
+            span.className = 'px-2 py-2 text-gray-400';
+            return span;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            updatePagination();
+        }
+
+        // ==================== END PAGINATION FUNCTIONS ====================
+
+        // Trip Cart functionality
+        $(document).ready(function() {
+            // Use event delegation for dynamically loaded content
+            // $(document).on('click', '.add-to-trip-cart', handleAddToTripCart);
+            applyFilters(); // Initial load with filters applied
+        });
+
+        function handleAddToTripCart(e) {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const $button = $(this);
             const tourismId = $button.data('tourism-id');
             const tourismName = $button.data('tourism-name');
             const $buttonText = $button.find('.button-text');
+            const $icon = $button.find('svg');
             const originalText = $buttonText.text();
-            
-            // Disable button and show loading
+
             $button.prop('disabled', true);
             $buttonText.text('Menambahkan...');
-            
+
             $.ajax({
                 url: '{{ route('trip-cart.add') }}',
                 type: 'POST',
@@ -845,30 +1488,29 @@
                 dataType: 'json',
                 success: function(data) {
                     if (data.success) {
-                        // Success state
-                        $buttonText.text('✓ Berhasil Ditambahkan!');
-                        $button.removeClass('from-green-600 to-teal-600')
-                               .addClass('from-blue-600 to-blue-700');
-                        
-                        // Show success notification
-                        showNotification('Destinasi "' + tourismName + '" berhasil ditambahkan ke trip cart!', 'success');
-                        
-                        // Reset button after 2 seconds
-                        setTimeout(function() {
-                            $buttonText.text(originalText);
-                            $button.prop('disabled', false)
-                                   .removeClass('from-blue-600 to-blue-700')
-                                   .addClass('from-green-600 to-teal-600');
-                        }, 2000);
+                        // Change button to "Already in Cart" state permanently
+                        $button.removeClass(
+                                'add-to-trip-cart from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700'
+                                )
+                            .addClass('from-gray-400 to-gray-500 cursor-not-allowed');
+
+                        // Change icon to checkmark
+                        $icon.html(
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>'
+                            );
+
+                        // Change text
+                        $buttonText.text('Sudah di Trip');
+
+                        showNotification('Destinasi "' + tourismName + '" berhasil ditambahkan!', 'success');
                     } else {
                         throw new Error(data.message || 'Terjadi kesalahan');
                     }
                 },
-                error: function(xhr, status, error) {
-                    console.error('Error:', error);
+                error: function(xhr) {
                     $buttonText.text(originalText);
                     $button.prop('disabled', false);
-                    
+
                     let errorMessage = 'Gagal menambahkan destinasi';
                     if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMessage = xhr.responseJSON.message;
@@ -876,44 +1518,6 @@
                     showNotification(errorMessage, 'error');
                 }
             });
-        });
-        
-        // Notification function
-        function showNotification(message, type = 'success') {
-            const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600';
-            const icon = type === 'success' 
-                ? '<svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>'
-                : '<svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>';
-            
-            const $notification = $('<div></div>')
-                .addClass('fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white font-semibold transform transition-all duration-300 flex items-center ' + bgColor)
-                .css({
-                    'transform': 'translateY(-100%)',
-                    'opacity': '0'
-                })
-                .html(icon + message);
-            
-            $('body').append($notification);
-            
-            // Animate in
-            setTimeout(function() {
-                $notification.css({
-                    'transform': 'translateY(0)',
-                    'opacity': '1'
-                });
-            }, 10);
-            
-            // Remove after 3 seconds
-            setTimeout(function() {
-                $notification.css({
-                    'transform': 'translateY(-100%)',
-                    'opacity': '0'
-                });
-                setTimeout(function() {
-                    $notification.remove();
-                }, 300);
-            }, 3000);
         }
-    });
-</script>
+    </script>
 @endsection

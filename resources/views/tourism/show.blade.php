@@ -394,12 +394,23 @@
                         <p class="text-gray-600 text-sm mb-4">Tambahkan destinasi ini ke dalam trip cart Anda!</p>
                         
                         @auth
-                            <button id="addToTripCart" data-tourism-id="{{ $tourism->id }}" class="block w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold py-3 px-4 rounded-lg text-center transition duration-300 shadow-md">
-                                <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                </svg>
-                                <span id="buttonText">Tambah ke Trip Cart</span>
-                            </button>
+                            @if($tourism->isInTripCart())
+                                <!-- Already in Cart -->
+                                <button class="block w-full bg-gradient-to-r from-gray-400 to-gray-500 text-white font-bold py-3 px-4 rounded-lg text-center transition duration-300 shadow-md cursor-not-allowed" disabled>
+                                    <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span>Sudah di Trip Cart</span>
+                                </button>
+                            @else
+                                <!-- Add to Cart -->
+                                <button id="addToTripCart" data-tourism-id="{{ $tourism->id }}" class="block w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold py-3 px-4 rounded-lg text-center transition duration-300 shadow-md">
+                                    <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                    <span id="buttonText">Tambah ke Trip Cart</span>
+                                </button>
+                            @endif
                         @else
                             <a href="{{ route('login') }}" class="block w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold py-3 px-4 rounded-lg text-center transition duration-300 shadow-md">
                                 Login untuk Menambahkan
@@ -475,8 +486,8 @@
         $('#addToTripCart').on('click', function() {
             const tourismId = $(this).data('tourism-id');
             const $buttonText = $('#buttonText');
-            const originalText = $buttonText.text();
             const $button = $(this);
+            const $icon = $button.find('svg');
             
             // Disable button and show loading
             $button.prop('disabled', true);
@@ -492,28 +503,24 @@
                 dataType: 'json',
                 success: function(data) {
                     if (data.success) {
-                        // Success notification
-                        $buttonText.text('✓ Berhasil Ditambahkan!');
-                        $button.removeClass('from-green-600 to-teal-600')
-                               .addClass('from-blue-600 to-blue-700');
+                        // Change button to "Already in Cart" state permanently
+                        $button.removeClass('from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700')
+                               .addClass('from-gray-400 to-gray-500 cursor-not-allowed');
+                        
+                        // Change icon to checkmark
+                        $icon.html('<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>');
+                        
+                        // Change text permanently
+                        $buttonText.text('Sudah di Trip Cart');
                         
                         // Show success message
                         showNotification('Destinasi berhasil ditambahkan ke trip cart!', 'success');
-                        
-                        // Reset button after 2 seconds
-                        setTimeout(function() {
-                            $buttonText.text(originalText);
-                            $button.prop('disabled', false)
-                                   .removeClass('from-blue-600 to-blue-700')
-                                   .addClass('from-green-600 to-teal-600');
-                        }, 2000);
                     } else {
                         throw new Error(data.message || 'Terjadi kesalahan');
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error:', error);
-                    $buttonText.text(originalText);
                     $button.prop('disabled', false);
                     
                     let errorMessage = 'Gagal menambahkan destinasi';
@@ -524,39 +531,6 @@
                 }
             });
         });
-        
-        // Notification function
-        function showNotification(message, type = 'success') {
-            const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600';
-            const $notification = $('<div></div>')
-                .addClass('fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white font-semibold transform transition-all duration-300 ' + bgColor)
-                .css({
-                    'transform': 'translateY(-100%)',
-                    'opacity': '0'
-                })
-                .text(message);
-            
-            $('body').append($notification);
-            
-            // Animate in
-            setTimeout(function() {
-                $notification.css({
-                    'transform': 'translateY(0)',
-                    'opacity': '1'
-                });
-            }, 10);
-            
-            // Remove after 3 seconds
-            setTimeout(function() {
-                $notification.css({
-                    'transform': 'translateY(-100%)',
-                    'opacity': '0'
-                });
-                setTimeout(function() {
-                    $notification.remove();
-                }, 300);
-            }, 3000);
-        }
     });
 </script>
 @endsection
