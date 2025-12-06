@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
+            $table->decimal('average_visit_duration', 5, 2)->nullable()->comment('Rata-rata waktu kunjungan dalam jam');
             $table->timestamps();
         });
     }

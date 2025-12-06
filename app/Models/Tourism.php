@@ -23,6 +23,7 @@ class Tourism extends Model
         'email',
         'website',
         'rating',
+        'popularity',
         'external_id',
         'external_source',
     ];
@@ -66,18 +67,18 @@ class Tourism extends Model
     }
 
     /**
-     * Get the facilities for this tourism through tourism_facility pivot table.
-     */
-    public function facilities(): BelongsToMany
-    {
-        return $this->belongsToMany(Facility::class, 'tourism_facility');
-    }
-
-    /**
      * Get the trip cart items for this tourism.
      */
     public function tripCart(): HasMany
     {
         return $this->hasMany(TripCart::class);
+    }
+
+    /**
+     * Get the reviews for this tourism.
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(TourismReview::class);
     }
 }

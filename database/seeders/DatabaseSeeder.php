@@ -25,27 +25,21 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Seed kategori
-        $this->call(CategorySeeder::class);
-
-        // Seed fasilitas
-        $this->call(FacilitySeeder::class);
+        // $this->call(CategorySeeder::class);
 
         // Seed wisata
-        $this->call(TourismSeeder::class);
+        // $this->call(TourismSeeder::class);
 
         // Seed tourism category
-        $this->call(TourismCategorySeeder::class);
+        // $this->call(TourismCategorySeeder::class);
 
         // Seed tourism price
-        $this->call(TourismPriceSeeder::class);
+        // $this->call(TourismPriceSeeder::class);
 
         // Seed tourism hour
-        $this->call(TourismHourSeeder::class);
-
-        // Seed tourism facility
-        $this->call(TourismFacilitySeeder::class);
+        // $this->call(TourismHourSeeder::class);
 
         // Seed tourism file
-        $this->call(TourismFileSeeder::class);
+        // $this->call(TourismFileSeeder::class);
     }
 }

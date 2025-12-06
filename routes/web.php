@@ -9,7 +9,6 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\TourismController as AdminTourismController;
 use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\FacilityController;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 
@@ -56,13 +55,6 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
     Route::get('/categories/{id}', [CategoryController::class, 'show'])->name('categories.show');
     Route::put('/categories/{id}', [CategoryController::class, 'update'])->name('categories.update');
     Route::delete('/categories/{id}', [CategoryController::class, 'destroy'])->name('categories.destroy');
-
-    // Facilities Management
-    Route::get('/facilities', [FacilityController::class, 'index'])->name('facilities.index');
-    Route::post('/facilities', [FacilityController::class, 'store'])->name('facilities.store');
-    Route::get('/facilities/{id}', [FacilityController::class, 'show'])->name('facilities.show');
-    Route::put('/facilities/{id}', [FacilityController::class, 'update'])->name('facilities.update');
-    Route::delete('/facilities/{id}', [FacilityController::class, 'destroy'])->name('facilities.destroy');
 
     // Placeholder routes for sidebar menu (will be implemented later)
     Route::get('/users', function() { return 'Users Management'; })->name('users.index');

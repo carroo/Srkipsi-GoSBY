@@ -538,7 +538,7 @@
             <a href="{{ route('tourism.show', $tourism->id) }}" class="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-2xl transition duration-300 transform hover:scale-105 hover:-translate-y-2 animate-fade-in-up group block" style="animation-delay: {{ $index * 0.1 }}s;">
                 <div class="overflow-hidden h-48 bg-gray-200 relative">
                     @if($tourism->files->isNotEmpty())
-                        <img src="{{ asset('storage/' . $tourism->files->first()->file_path) }}"
+                        <img src="{{ filter_var($tourism->files->first()->file_path, FILTER_VALIDATE_URL) ? $tourism->files->first()->file_path : asset('storage/' . $tourism->files->first()->file_path) }}"
                              alt="{{ $tourism->name }}"
                              class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
                     @else

@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Tourism;
 use App\Models\Category;
-use App\Models\Facility;
 use App\Models\TourismPrice;
 use App\Models\TourismFile;
 use App\Models\TourismHour;
+use App\Models\TourismReview;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -23,9 +23,22 @@ class TourismController extends Controller
      */
     public function index(Request $request)
     {
+
+        // $serpApiKey = 'ae4ec8d5ee2513828d44ffeafaf5cbd9ba7222eab529255b3ab91d35d2f9af20';
+        //                     $serpApiUrl = 'https://serpapi.com/search';
+                            
+        //                     $serpResponse = Http::timeout(10)->get($serpApiUrl, [
+        //                         'engine' => 'google_maps',
+        //                         'q' => 'OCA Ice Skating Arena Surabaya Surabaya',
+        //                         'type' => 'search',
+        //                         'api_key' => $serpApiKey
+        //                     ]);
+        //                     $data = $serpResponse->json();
+        //                     dd($data);
+
         if ($request->ajax()) {
-            $tourism = Tourism::with(['categories', 'facilities', 'prices'])
-                ->select(['id', 'name', 'rating']);
+            $tourism = Tourism::with(['categories', 'prices'])
+                ->select(['id', 'name', 'rating', 'popularity']);
 
             return DataTables::of($tourism)
                 ->addIndexColumn()
@@ -37,25 +50,6 @@ class TourismController extends Controller
                     foreach ($row->categories as $category) {
                         $badges .= '<span class="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs mr-1 mb-1">' . $category->name . '</span>';
                     }
-                    return $badges;
-                })
-                ->addColumn('facilities', function($row) {
-                    if ($row->facilities->isEmpty()) {
-                        return '<span class="inline-block px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold mr-1 mb-1">0</span>';
-                    }
-                    $count = $row->facilities->count();
-                    $badges = '<span class="inline-block px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold mr-1 mb-1">' . $count . '</span>';
-                    
-                    // Tampilkan max 2 fasilitas setelah badge angka
-                    $facilities = $row->facilities->take(2);
-                    foreach ($facilities as $facility) {
-                        $badges .= '<span class="inline-block px-2 py-1 bg-green-50 text-green-600 rounded-full text-xs mr-1 mb-1">' . $facility->name . '</span>';
-                    }
-                    
-                    if ($count > 2) {
-                        $badges .= '<span class="inline-block px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">+' . ($count - 2) . '</span>';
-                    }
-                    
                     return $badges;
                 })
                 ->addColumn('price_range', function($row) {
@@ -112,14 +106,16 @@ class TourismController extends Controller
                     $stars .= ' <span class="text-sm font-medium text-gray-700 ml-1">' . number_format($row->rating, 1) . '</span>';
                     return $stars;
                 })
-                ->rawColumns(['categories', 'facilities', 'price_range', 'rating', 'action'])
+                ->addColumn('popularity', function($row) {
+                    return '<span class="text-sm font-medium text-gray-700">' . number_format($row->popularity, 0, ',', '.') . '</span>';
+                })
+                ->rawColumns(['categories', 'price_range', 'rating', 'popularity', 'action'])
                 ->make(true);
         }
 
         $categories = Category::all();
-        $facilities = Facility::all();
         
-        return view('admin.tourism.index', compact('categories', 'facilities'));
+        return view('admin.tourism.index', compact('categories'));
     }
 
     /**
@@ -137,10 +133,9 @@ class TourismController extends Controller
             'email' => 'nullable|email|max:255',
             'website' => 'nullable|url|max:255',
             'rating' => 'nullable|numeric|between:0,5',
+            'popularity' => 'nullable|integer|min:0',
             'categories' => 'nullable|array',
             'categories.*' => 'exists:category,id',
-            'facilities' => 'nullable|array',
-            'facilities.*' => 'exists:facility,id',
             'prices' => 'nullable|array',
             'prices.*.type' => 'required_with:prices|string|max:100',
             'prices.*.price' => 'required_with:prices|numeric|min:0',
@@ -158,6 +153,8 @@ class TourismController extends Controller
             'email.email' => 'Format email tidak valid',
             'website.url' => 'Format website tidak valid',
             'rating.between' => 'Rating harus antara 0 dan 5',
+            'popularity.integer' => 'Jumlah popularity harus berupa angka',
+            'popularity.min' => 'Jumlah popularity tidak boleh kurang dari 0',
             'images.*.image' => 'File harus berupa gambar',
             'images.*.mimes' => 'Gambar harus berformat jpeg, png, jpg, atau gif',
             'images.*.max' => 'Ukuran gambar maksimal 2MB',
@@ -183,16 +180,12 @@ class TourismController extends Controller
                 'email' => $request->email,
                 'website' => $request->website,
                 'rating' => $request->rating,
+                'popularity' => $request->popularity ?? 0,
             ]);
 
             // Attach categories
             if ($request->has('categories')) {
                 $tourism->categories()->attach($request->categories);
-            }
-
-            // Attach facilities
-            if ($request->has('facilities')) {
-                $tourism->facilities()->attach($request->facilities);
             }
 
             // Create prices
@@ -233,7 +226,7 @@ class TourismController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Wisata berhasil ditambahkan',
-                'data' => $tourism->load(['categories', 'facilities', 'prices', 'hours', 'files'])
+                'data' => $tourism->load(['categories', 'prices', 'hours', 'files'])
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -250,7 +243,7 @@ class TourismController extends Controller
     public function show($id)
     {
         try {
-            $tourism = Tourism::with(['categories', 'facilities', 'prices', 'hours', 'files'])
+            $tourism = Tourism::with(['categories', 'prices', 'hours', 'files', 'reviews'])
                 ->findOrFail($id);
 
             return response()->json([
@@ -280,10 +273,9 @@ class TourismController extends Controller
             'email' => 'nullable|email|max:255',
             'website' => 'nullable|url|max:255',
             'rating' => 'nullable|numeric|between:0,5',
+            'popularity' => 'nullable|integer|min:0',
             'categories' => 'nullable|array',
             'categories.*' => 'exists:category,id',
-            'facilities' => 'nullable|array',
-            'facilities.*' => 'exists:facility,id',
             'prices' => 'nullable|array',
             'prices.*.type' => 'required_with:prices|string|max:100',
             'prices.*.price' => 'required_with:prices|numeric|min:0',
@@ -303,6 +295,8 @@ class TourismController extends Controller
             'email.email' => 'Format email tidak valid',
             'website.url' => 'Format website tidak valid',
             'rating.between' => 'Rating harus antara 0 dan 5',
+            'popularity.integer' => 'Jumlah popularity harus berupa angka',
+            'popularity.min' => 'Jumlah popularity tidak boleh kurang dari 0',
             'images.*.image' => 'File harus berupa gambar',
             'images.*.mimes' => 'Gambar harus berformat jpeg, png, jpg, atau gif',
             'images.*.max' => 'Ukuran gambar maksimal 2MB',
@@ -330,6 +324,7 @@ class TourismController extends Controller
                 'email' => $request->email,
                 'website' => $request->website,
                 'rating' => $request->rating,
+                'popularity' => $request->popularity ?? 0,
             ]);
 
             // Sync categories
@@ -337,13 +332,6 @@ class TourismController extends Controller
                 $tourism->categories()->sync($request->categories);
             } else {
                 $tourism->categories()->detach();
-            }
-
-            // Sync facilities
-            if ($request->has('facilities')) {
-                $tourism->facilities()->sync($request->facilities);
-            } else {
-                $tourism->facilities()->detach();
             }
 
             // Update prices - delete all and recreate
@@ -376,7 +364,10 @@ class TourismController extends Controller
                     ->get();
                 
                 foreach ($filesToDelete as $file) {
-                    Storage::disk('public')->delete($file->file_path);
+                    // Only delete from storage if it's not an external URL
+                    if (!filter_var($file->file_path, FILTER_VALIDATE_URL)) {
+                        Storage::disk('public')->delete($file->file_path);
+                    }
                     $file->delete();
                 }
             }
@@ -398,7 +389,7 @@ class TourismController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Wisata berhasil diperbarui',
-                'data' => $tourism->load(['categories', 'facilities', 'prices', 'hours', 'files'])
+                'data' => $tourism->load(['categories', 'prices', 'hours', 'files'])
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -418,9 +409,12 @@ class TourismController extends Controller
         try {
             $tourism = Tourism::findOrFail($id);
 
-            // Delete all related files from storage
+            // Delete all related files from storage (only local files, not external URLs)
             foreach ($tourism->files as $file) {
-                Storage::disk('public')->delete($file->file_path);
+                // Only delete from storage if it's not an external URL
+                if (!filter_var($file->file_path, FILTER_VALIDATE_URL)) {
+                    Storage::disk('public')->delete($file->file_path);
+                }
             }
 
             // Delete tourism (cascade will handle related records based on migration)
@@ -527,17 +521,87 @@ class TourismController extends Controller
                         
                         $isUpdate = (bool)$tourism;
                         
-                        DB::beginTransaction();
+                        // DB::beginTransaction();
 
+                        // Get rating and popularity data from SerpAPI
+                        $rating = null;
+                        $popularity = null;
+                        $address = null;
+                        $serpHours = null;
+                        $serpReviews = null;
+                        
+                        try {
+                            $this->sendSSE('info', "Mengambil rating untuk: {$tourismName}", $currentProgress);
+                            
+                            $serpApiKey = 'ae4ec8d5ee2513828d44ffeafaf5cbd9ba7222eab529255b3ab91d35d2f9af20';
+                            $serpApiUrl = 'https://serpapi.com/search';
+                            
+                            $serpResponse = Http::timeout(10)->get($serpApiUrl, [
+                                'engine' => 'google_maps',
+                                'q' => $tourismName . ' Surabaya',
+                                'type' => 'search',
+                                'api_key' => $serpApiKey
+                            ]);
+                            
+                            if ($serpResponse->successful()) {
+                                $serpData = $serpResponse->json();
+                                
+                                if(!empty($serpData['place_results'])) {
+                                    // Use place_results 
+                                    $firstResult = $serpData['place_results'];
+                                    $rating = $firstResult['rating'] ?? null;
+                                    $popularity = $firstResult['reviews'] ?? null;
+                                    $address = $firstResult['address'] ?? null;
+                                    $serpHours = $firstResult['hours'] ?? null;
+                                    $serpReviews = $firstResult['user_reviews']['summary'] ?? null;
+
+                                    if ($rating && $popularity) {
+                                        $this->sendSSE('success', "Rating ditemukan: {$rating} ({$popularity} reviews)", $currentProgress);
+                                    }
+                                } else if(!empty($serpData['places_results'])) {
+                                    // Fallback to places_results if local_results is empty
+                                    $firstResult = $serpData['places_results'][0] ?? [];
+                                    $rating = $firstResult['rating'] ?? null;
+                                    $popularity = $firstResult['reviews'] ?? null;
+                                    $address = $firstResult['address'] ?? null;
+
+                                    if ($rating && $popularity) {
+                                        $this->sendSSE('success', "Rating ditemukan: {$rating} ({$popularity} reviews)", $currentProgress);
+                                    }
+                                }else if (!empty($serpData['local_results'])) {
+                                    $firstResult = $serpData['local_results'][0] ?? [];
+                                    $rating = $firstResult['rating'] ?? null;
+                                    $popularity = $firstResult['reviews'] ?? null;
+                                    $address = $firstResult['address'] ?? null;
+
+                                    if ($rating && $popularity) {
+                                        $this->sendSSE('success', "Rating ditemukan: {$rating} ({$popularity} reviews)", $currentProgress);
+                                    }
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            // If SerpAPI fails, just continue without rating
+                            $this->sendSSE('warning', "Gagal mengambil rating: " . $e->getMessage(), $currentProgress);
+                        }
+                        
+                        // Skip if rating not found
+                        if (!$rating) {
+                            // $skipped++;
+                            // $this->sendSSE('warning', "{$tourismName}: Rating tidak ditemukan, data dilewati", $currentProgress);
+                            // continue;
+                        }
+                        
                         // Create or update tourism record
                         $tourismData = [
                             'name' => $tourismName,
                             'description' => $description,
-                            'location' => $apiTourism['address'] ?? null,
+                            'location' => $apiTourism['address'] ? $apiTourism['address'] : ($address ?? null),
                             'latitude' => $apiTourism['latitude'] ?? null,
                             'longitude' => $apiTourism['longitude'] ?? null,
                             'phone' => $apiTourism['contact'] ?? null,
                             'website' => $apiTourism['websiteLink'] ?? null,
+                            'rating' => $rating,
+                            'popularity' => $popularity ?? 0,
                             'external_id' => $externalId,
                             'external_source' => 'tourism.surabaya.go.id',
                         ];
@@ -550,10 +614,15 @@ class TourismController extends Controller
                             // Clear existing relations for update
                             $tourism->categories()->detach();
                             $tourism->prices()->delete();
+                            $tourism->hours()->delete();
+                            $tourism->reviews()->delete();
                             
-                            // Delete old images if updating
+                            // Delete old images if updating (only from storage, not external URLs)
                             foreach ($tourism->files as $file) {
-                                Storage::disk('public')->delete($file->file_path);
+                                // Only delete from storage if it's not an external URL
+                                if (!filter_var($file->file_path, FILTER_VALIDATE_URL)) {
+                                    Storage::disk('public')->delete($file->file_path);
+                                }
                                 $file->delete();
                             }
                         } else {
@@ -587,36 +656,99 @@ class TourismController extends Controller
                             }
                         }
 
-                        // Import images
+                        // Import hours from SerpAPI
+                        if (!empty($serpHours) && is_array($serpHours)) {
+                            $this->sendSSE('info', "Menyimpan jam operasional dari SerpAPI", $currentProgress);
+                            $dayMapping = [
+                                'monday' => 'Senin',
+                                'tuesday' => 'Selasa',
+                                'wednesday' => 'Rabu',
+                                'thursday' => 'Kamis',
+                                'friday' => 'Jumat',
+                                'saturday' => 'Sabtu',
+                                'sunday' => 'Minggu'
+                            ];
+                            
+                            foreach ($serpHours as $hourData) {
+                                foreach ($hourData as $dayEn => $timeRange) {
+                                    $dayId = $dayMapping[strtolower($dayEn)] ?? null;
+                                    
+                                    if ($dayId && $timeRange !== 'Closed') {
+                                        // Parse time range (e.g., "10 AM–10 PM")
+                                        $times = explode('–', str_replace([' AM', ' PM', "\u{202F}"], ['', '', ''], $timeRange));
+                                        
+                                        if (count($times) === 2) {
+                                            try {
+                                                // Clean and parse times
+                                                $openTime = trim($times[0]);
+                                                $closeTime = trim($times[1]);
+                                                
+                                                // Convert to 24-hour format
+                                                $openHour = (int)$openTime;
+                                                $closeHour = (int)$closeTime;
+                                                
+                                                // Check if PM indicator exists in original string
+                                                if (strpos($timeRange, 'PM') !== false) {
+                                                    if ($closeHour < 12) {
+                                                        $closeHour += 12;
+                                                    }
+                                                    if ($openHour < 12 && $openHour < $closeHour - 12) {
+                                                        $openHour += 12;
+                                                    }
+                                                }
+                                                
+                                                $tourism->hours()->create([
+                                                    'day' => $dayId,
+                                                    'open_time' => sprintf('%02d:00', $openHour),
+                                                    'close_time' => sprintf('%02d:00', $closeHour),
+                                                ]);
+                                            } catch (\Exception $e) {
+                                                // Skip if time parsing fails
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Import reviews from SerpAPI
+                        if (!empty($serpReviews) && is_array($serpReviews)) {
+                            $this->sendSSE('info', "Menyimpan reviews dari SerpAPI", $currentProgress);
+                            
+                            foreach ($serpReviews as $review) {
+                                try {
+                                    if (!empty($review['snippet'])) {
+                                        $tourism->reviews()->create([
+                                            'snippet' => $review['snippet'],
+                                        ]);
+                                    }
+                                } catch (\Exception $e) {
+                                    // Skip if review save fails
+                                    continue;
+                                }
+                            }
+                        }
+
+                        // Import images - save original links without downloading
                         if (!empty($apiTourism['touristDestinationFiles'])) {
                             foreach ($apiTourism['touristDestinationFiles'] as $apiFile) {
                                 if (!empty($apiFile['link'])) {
                                     try {
-                                        $imageResponse = Http::timeout(15)->get($apiFile['link']);
-                                        
-                                        if ($imageResponse->successful()) {
-                                            $imageContent = $imageResponse->body();
-                                            $extension = $apiFile['ext'] ?? 'jpg';
-                                            $fileName = 'imported_' . time() . '_' . uniqid() . '.' . $extension;
-                                            $path = 'tourism/' . $fileName;
-                                            
-                                            Storage::disk('public')->put($path, $imageContent);
-                                            
-                                            $tourism->files()->create([
-                                                'file_path' => $path,
-                                                'file_type' => 'image/' . $extension,
-                                                'original_name' => $apiFile['name'] ?? $fileName,
-                                            ]);
-                                        }
+                                        $tourism->files()->create([
+                                            'file_path' => $apiFile['link'], // Save original URL
+                                            'file_type' => 'image/' . ($apiFile['ext'] ?? 'jpg'),
+                                            'original_name' => $apiFile['name'] ?? 'imported_image',
+                                        ]);
                                     } catch (\Exception $e) {
-                                        // Skip if image download fails
+                                        // Skip if save fails
                                         continue;
                                     }
                                 }
                             }
                         }
 
-                        DB::commit();
+                        // DB::commit();
                         
                         if ($isUpdate) {
                             $updated++;
@@ -625,7 +757,7 @@ class TourismController extends Controller
                         }
 
                     } catch (\Exception $e) {
-                        DB::rollBack();
+                        // DB::rollBack();
                         $errors[] = [
                             'name' => $tourismName ?? 'Unknown',
                             'error' => $e->getMessage()

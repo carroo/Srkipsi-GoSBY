@@ -75,8 +75,7 @@ class TourismController extends Controller
             'files',
             'hours' => function($query) {
                 $query->orderByRaw("FIELD(day, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu')");
-            },
-            'facilities'
+            }
         ])->findOrFail($id);
 
         // Get related/similar tourism based on categories (exclude current)
@@ -106,6 +105,7 @@ class TourismController extends Controller
      */
     private function calculateDistance($lat1, $lon1, $lat2, $lon2)
     {
+        return $this->calculateDistanceHaversine($lat1, $lon1, $lat2, $lon2);
         try {
             $apiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjIyMTZlOWViNmQwYjQ1MTRhODE5NDJlNzM2MDFjNTI1IiwiaCI6Im11cm11cjY0In0';
             
@@ -185,7 +185,6 @@ class TourismController extends Controller
         $weights = [
             'rating' => floatval($request->weight_rating) / 100,
             'price' => floatval($request->weight_price) / 100,
-            'facility' => floatval($request->weight_facility) / 100,
             'distance' => floatval($request->weight_distance) / 100,
         ];
 
@@ -205,7 +204,7 @@ class TourismController extends Controller
         }
 
         // Validate total weight must be exactly 100%
-        $totalWeight = $weights['rating'] + $weights['price'] + $weights['facility'] + $weights['distance'] + $categoryWeightTotal;
+        $totalWeight = $weights['rating'] + $weights['price'] + $weights['distance'] + $categoryWeightTotal;
 
         if (abs($totalWeight - 1.0) > 0.001) { // Allow small floating point differences
             return redirect()->route('tourism.index')->with('error', 'Total bobot harus tepat 100%! Total saat ini: ' . number_format($totalWeight * 100, 2) . '%');
@@ -216,20 +215,18 @@ class TourismController extends Controller
         $userLon = floatval($request->longitude);
 
         // Get all tourism with relations
-        $tourisms = Tourism::with(['categories', 'prices', 'facilities'])->get();
+        $tourisms = Tourism::with(['categories', 'prices'])->get();
 
         // Initialize arrays for normalization
         $rawData = [];
         $maxValues = [
             'rating' => 0,
             'price' => 0,
-            'facility' => 0,
             'distance' => 0,
         ];
         $minValues = [
             'rating' => PHP_INT_MAX,
             'price' => PHP_INT_MAX,
-            'facility' => PHP_INT_MAX,
             'distance' => PHP_INT_MAX,
         ];
 
@@ -240,9 +237,6 @@ class TourismController extends Controller
 
             // Price (cost - lower is better) - use minimum price
             $price = $tourism->prices->min('price') ?? 0;
-
-            // Facility count (benefit - more is better)
-            $facilityCount = $tourism->facilities->count();
 
             // Distance (cost - lower is better)
             $distance = $this->calculateDistance(
@@ -265,19 +259,16 @@ class TourismController extends Controller
                 'tourism' => $tourism,
                 'rating' => $rating,
                 'price' => $price,
-                'facility' => $facilityCount,
                 'distance' => $distance,
                 'categories' => $categoryMatches, // Array of individual category matches
             ];
 
             // Update min/max values
             $maxValues['rating'] = max($maxValues['rating'], $rating);
-            $maxValues['facility'] = max($maxValues['facility'], $facilityCount);
             $maxValues['distance'] = max($maxValues['distance'], $distance);
 
             $minValues['rating'] = min($minValues['rating'], $rating);
             $minValues['price'] = min($minValues['price'], $price > 0 ? $price : PHP_INT_MAX);
-            $minValues['facility'] = min($minValues['facility'], $facilityCount);
             $minValues['distance'] = min($minValues['distance'], $distance);
         }
 
@@ -296,11 +287,6 @@ class TourismController extends Controller
                 ? $minValues['price'] / $data['price']
                 : 1; // Free entrance gets max score
 
-            // Normalize Facility (benefit: value/max)
-            $normalized['facility'] = $maxValues['facility'] > 0
-                ? $data['facility'] / $maxValues['facility']
-                : 0;
-
             // Normalize Distance (cost: min/value) - lower is better
             $normalized['distance'] = ($data['distance'] > 0 && $minValues['distance'] > 0)
                 ? $minValues['distance'] / $data['distance']
@@ -316,7 +302,6 @@ class TourismController extends Controller
             $sawScore =
                 ($normalized['rating'] * $weights['rating']) +
                 ($normalized['price'] * $weights['price']) +
-                ($normalized['facility'] * $weights['facility']) +
                 ($normalized['distance'] * $weights['distance']);
 
             // Add each category score individually

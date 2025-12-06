@@ -32,7 +32,7 @@
                 <!-- Right Side - Auth Buttons -->
                 <div class="flex items-center space-x-2 sm:space-x-3">
                     <!-- Rekomendasikan Button -->
-                    <a href="{{ route('trip-cart.index') }}" class="relative flex items-center space-x-2 px-3 sm:px-4 py-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-600 rounded-lg transition duration-300 group">
+                    <a href="{{ route('tourism.index') }}" class="relative flex items-center space-x-2 px-3 sm:px-4 py-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-600 rounded-lg transition duration-300 group">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                         </svg>
@@ -59,7 +59,7 @@
                                 </svg>
                             </button>
                             <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-100">
-                                <a href="{{ route('trip-cart.index') }}" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 transition duration-200">
+                                <a href="{{ route('tourism.index') }}" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 transition duration-200">
                                     <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                                     </svg>
@@ -113,7 +113,7 @@
             <!-- Mobile Navigation -->
             <div id="mobile-menu" class="hidden md:hidden pb-4 space-y-2 border-t border-gray-100 mt-2">
                 <!-- Rekomendasikan Button -->
-                <a href="{{ route('trip-cart.index') }}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-blue-50 rounded-lg font-medium transition duration-300">
+                <a href="{{ route('tourism.index') }}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-blue-50 rounded-lg font-medium transition duration-300">
                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                     </svg>
@@ -216,7 +216,7 @@
                 <div>
                     <h3 class="text-white font-bold mb-4">Navigasi</h3>
                     <ul class="text-sm text-gray-400 space-y-2">
-                        <li><a href="{{ route('trip-cart.index') }}" class="hover:text-white transition">Rekomendasikan</a></li>
+                        <li><a href="{{ route('tourism.index') }}" class="hover:text-white transition">Rekomendasikan</a></li>
                         <li><a href="#" class="hover:text-white transition">Jadwalkan</a></li>
                     </ul>
                 </div>

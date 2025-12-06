@@ -194,12 +194,8 @@
 
                         <!-- Image -->
                         <div class="relative h-48 bg-gray-200 overflow-hidden">
-                            @php
-                                $useAsset = false; // Change to true for production
-                            @endphp
-
                             @if($tourism->files->isNotEmpty())
-                                <img src="{{ $useAsset ? asset('storage/' . $tourism->files->first()->file_path) : $tourism->files->first()->file_path }}"
+                                <img src="{{ filter_var($tourism->files->first()->file_path, FILTER_VALIDATE_URL) ? $tourism->files->first()->file_path : asset('storage/' . $tourism->files->first()->file_path) }}"
                                      alt="{{ $tourism->name }}"
                                      class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
                             @else
@@ -422,28 +418,7 @@
                         </div>
                     </div>
 
-                    <!-- Kriteria 3: Fasilitas -->
-                    <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-xl border-2 border-purple-200">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-purple-500 p-2 rounded-lg mr-3">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <label class="block text-sm font-bold text-gray-900 mb-1">Fasilitas</label>
-                                <p class="text-xs text-gray-600">Kelengkapan fasilitas</p>
-                            </div>
-                        </div>
-                        <div class="relative">
-                            <input type="number" name="weight_facility" min="0" max="100" step="1" value="20"
-                                   class="w-full px-4 py-3 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-bold text-lg text-center"
-                                   onchange="calculateTotal()">
-                            <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-purple-600 font-bold">%</span>
-                        </div>
-                    </div>
-
-                    <!-- Kriteria 4: Jarak -->
+                    <!-- Kriteria 3: Jarak -->
                     <div class="bg-gradient-to-br from-blue-50 to-cyan-50 p-5 rounded-xl border-2 border-blue-200">
                         <div class="flex items-center mb-4">
                             <div class="bg-blue-500 p-2 rounded-lg mr-3">
@@ -687,7 +662,6 @@
     function calculateTotal() {
         const rating = parseInt(document.querySelector('input[name="weight_rating"]').value) || 0;
         const price = parseInt(document.querySelector('input[name="weight_price"]').value) || 0;
-        const facility = parseInt(document.querySelector('input[name="weight_facility"]').value) || 0;
         const distance = parseInt(document.querySelector('input[name="weight_distance"]').value) || 0;
 
         // Sum all category weights
@@ -698,7 +672,7 @@
             }
         });
 
-        const total = rating + price + facility + distance + categoryTotal;
+        const total = rating + price + distance + categoryTotal;
 
         // Update display
         document.getElementById('totalPercentage').textContent = total;
@@ -727,7 +701,6 @@
     document.getElementById('recommendationForm').addEventListener('submit', function(e) {
         const rating = parseInt(document.querySelector('input[name="weight_rating"]').value) || 0;
         const price = parseInt(document.querySelector('input[name="weight_price"]').value) || 0;
-        const facility = parseInt(document.querySelector('input[name="weight_facility"]').value) || 0;
         const distance = parseInt(document.querySelector('input[name="weight_distance"]').value) || 0;
 
         // Sum all category weights
@@ -738,7 +711,7 @@
             }
         });
 
-        const total = rating + price + facility + distance + categoryTotal;
+        const total = rating + price + distance + categoryTotal;
 
         if (total !== 100) {
             e.preventDefault();

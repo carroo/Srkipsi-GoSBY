@@ -22,6 +22,9 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('website')->nullable();
             $table->decimal('rating', 3, 2)->nullable(); // 0-5 rating
+            $table->integer('popularity')->default(0)->comment('Jumlah popularity');
+            $table->string('external_id')->nullable();
+            $table->string('external_source')->nullable();
             $table->timestamps();
         });
     }

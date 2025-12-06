@@ -31,9 +31,9 @@
                         <th class="text-left">No</th>
                         <th class="text-left">Nama Wisata</th>
                         <th class="text-left">Kategori</th>
-                        <th class="text-left">Fasilitas</th>
                         <th class="text-left">Range Harga</th>
                         <th class="text-left">Rating</th>
+                        <th class="text-left">popularity</th>
                         <th class="text-center">Aksi</th>
                     </tr>
                 </thead>
@@ -72,7 +72,7 @@
                             <i class="fas fa-map-marker-alt mr-2"></i>Lokasi & Kontak
                         </button>
                         <button type="button" onclick="switchTab('categories')" id="tab-categories" class="tab-button py-3 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-                            <i class="fas fa-tags mr-2"></i>Kategori & Fasilitas
+                            <i class="fas fa-tags mr-2"></i>Kategori
                         </button>
                         <button type="button" onclick="switchTab('prices')" id="tab-prices" class="tab-button py-3 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
                             <i class="fas fa-money-bill-wave mr-2"></i>Harga & Jam Operasional
@@ -119,6 +119,17 @@
                                     class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     placeholder="4.5">
                                 <p id="ratingError" class="mt-1 text-sm text-red-600 hidden"></p>
+                            </div>
+
+                            <!-- popularity -->
+                            <div>
+                                <label for="tourismpopularity" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Jumlah popularity
+                                </label>
+                                <input type="number" id="tourismpopularity" name="popularity" step="1" min="0"
+                                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="100">
+                                <p id="popularityError" class="mt-1 text-sm text-red-600 hidden"></p>
                             </div>
                         </div>
                     </div>
@@ -194,9 +205,9 @@
                         </div>
                     </div>
 
-                    <!-- Categories & Facilities Tab -->
+                    <!-- Categories Tab -->
                     <div id="content-categories" class="tab-content hidden">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="grid grid-cols-1 gap-6">
                             <!-- Categories -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-3">
@@ -212,23 +223,6 @@
                                     @endforeach
                                 </div>
                                 <p id="categoriesError" class="mt-1 text-sm text-red-600 hidden"></p>
-                            </div>
-
-                            <!-- Facilities -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-3">
-                                    <i class="fas fa-check-circle mr-2"></i>Fasilitas
-                                </label>
-                                <div class="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-4">
-                                    @foreach($facilities as $facility)
-                                    <label class="flex items-center hover:bg-gray-50 p-2 rounded cursor-pointer">
-                                        <input type="checkbox" name="facilities[]" value="{{ $facility->id }}"
-                                            class="facility-checkbox w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                        <span class="ml-2 text-sm text-gray-700">{{ $facility->name }}</span>
-                                    </label>
-                                    @endforeach
-                                </div>
-                                <p id="facilitiesError" class="mt-1 text-sm text-red-600 hidden"></p>
                             </div>
                         </div>
                     </div>
@@ -422,10 +416,10 @@ $(document).ready(function() {
         columns: [
             {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '5%'},
             {data: 'name', name: 'name', width: '25%'},
-            {data: 'categories', name: 'categories', orderable: false, width: '20%'},
-            {data: 'facilities', name: 'facilities', orderable: false, width: '15%'},
-            {data: 'price_range', name: 'price_range', orderable: false, width: '15%'},
+            {data: 'categories', name: 'categories', orderable: false, width: '18%'},
+            {data: 'price_range', name: 'price_range', orderable: false, width: '17%'},
             {data: 'rating', name: 'rating', width: '10%'},
+            {data: 'popularity', name: 'popularity', width: '10%'},
             {data: 'action', name: 'action', orderable: false, searchable: false, width: '10%'}
         ],
         order: [[1, 'asc']],
@@ -522,7 +516,7 @@ function createTourism() {
     $('#tourismForm')[0].reset();
     $('#tourismId').val('');
     $('.text-red-600').addClass('hidden');
-    $('.category-checkbox, .facility-checkbox').prop('checked', false);
+    $('.category-checkbox').prop('checked', false);
     $('#pricesContainer, #hoursContainer, #imagePreviewContainer, #existingImagesContainer').empty();
     priceIndex = 0;
     hourIndex = 0;
@@ -547,6 +541,7 @@ function viewTourism(id) {
                             <div class="flex items-center gap-4 text-sm text-gray-600">
                                 <span><i class="fas fa-map-marker-alt mr-1"></i>${data.location || '-'}</span>
                                 <span><i class="fas fa-star text-yellow-400 mr-1"></i>${data.rating ? data.rating + '/5' : '-'}</span>
+                                <span><i class="fas fa-users mr-1"></i>${data.popularity ? Number(data.popularity).toLocaleString('id-ID') + ' popularity' : '0 popularity'}</span>
                             </div>
                         </div>
 
@@ -575,19 +570,11 @@ function viewTourism(id) {
                             </div>
                         </div>
 
-                        <!-- Categories & Facilities -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <h5 class="font-semibold text-gray-900 mb-2">Kategori</h5>
-                                <div class="flex flex-wrap gap-2">
-                                    ${data.categories.map(cat => `<span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">${cat.name}</span>`).join('') || '<span class="text-gray-400 text-sm">Tidak ada kategori</span>'}
-                                </div>
-                            </div>
-                            <div>
-                                <h5 class="font-semibold text-gray-900 mb-2">Fasilitas</h5>
-                                <div class="flex flex-wrap gap-2">
-                                    ${data.facilities.map(fac => `<span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs">${fac.name}</span>`).join('') || '<span class="text-gray-400 text-sm">Tidak ada fasilitas</span>'}
-                                </div>
+                        <!-- Categories -->
+                        <div>
+                            <h5 class="font-semibold text-gray-900 mb-2">Kategori</h5>
+                            <div class="flex flex-wrap gap-2">
+                                ${data.categories.map(cat => `<span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">${cat.name}</span>`).join('') || '<span class="text-gray-400 text-sm">Tidak ada kategori</span>'}
                             </div>
                         </div>
 
@@ -672,17 +659,12 @@ function editTourism(id) {
                 $('#tourismEmail').val(data.email);
                 $('#tourismWebsite').val(data.website);
                 $('#tourismRating').val(data.rating);
+                $('#tourismpopularity').val(data.popularity);
                 
                 // Set categories
                 $('.category-checkbox').prop('checked', false);
                 data.categories.forEach(cat => {
                     $(`.category-checkbox[value="${cat.id}"]`).prop('checked', true);
-                });
-                
-                // Set facilities
-                $('.facility-checkbox').prop('checked', false);
-                data.facilities.forEach(fac => {
-                    $(`.facility-checkbox[value="${fac.id}"]`).prop('checked', true);
                 });
                 
                 // Load prices

@@ -75,9 +75,6 @@
 <section class="py-8 bg-white">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         @php
-            // Configuration: Set to true for production (using asset/storage), false for development (direct path)
-            $useAsset = false;
-
             $fileCount = $tourism->files->count();
             $displayFiles = $tourism->files->take(5);
         @endphp
@@ -93,7 +90,7 @@
         @elseif($fileCount == 1)
             <!-- 1 image - Full width -->
             <div class="mb-8 animate-fade-in-up">
-                <img src="{{ $useAsset ? asset('storage/' . $displayFiles->first()->file_path) : $displayFiles->first()->file_path }}"
+                <img src="{{ filter_var($displayFiles->first()->file_path, FILTER_VALIDATE_URL) ? $displayFiles->first()->file_path : asset('storage/' . $displayFiles->first()->file_path) }}"
                      alt="{{ $tourism->name }}"
                      class="w-full h-[500px] object-cover rounded-2xl shadow-xl">
             </div>
@@ -103,7 +100,7 @@
             <div class="grid md:grid-cols-2 gap-6 mb-8">
                 @foreach($displayFiles as $index => $file)
                     <div class="animate-fade-in-up" style="animation-delay: {{ $index * 0.1 }}s;">
-                        <img src="{{ $useAsset ? asset('storage/' . $file->file_path) : $file->file_path }}"
+                        <img src="{{ filter_var($file->file_path, FILTER_VALIDATE_URL) ? $file->file_path : asset('storage/' . $file->file_path) }}"
                              alt="{{ $tourism->name }}"
                              class="w-full h-96 object-cover rounded-2xl shadow-xl gallery-image">
                     </div>
@@ -114,14 +111,14 @@
             <!-- 3 images - 1 large + 2 stacked -->
             <div class="grid md:grid-cols-3 gap-6 mb-8">
                 <div class="animate-fade-in-up col-span-2">
-                    <img src="{{ $useAsset ? asset('storage/' . $displayFiles->first()->file_path) : $displayFiles->first()->file_path }}"
+                    <img src="{{ filter_var($displayFiles->first()->file_path, FILTER_VALIDATE_URL) ? $displayFiles->first()->file_path : asset('storage/' . $displayFiles->first()->file_path) }}"
                          alt="{{ $tourism->name }}"
                          class="w-full h-full min-h-[400px] object-cover rounded-2xl shadow-xl gallery-image">
                 </div>
                 <div class="grid grid-rows-2 gap-6">
                     @foreach($displayFiles->skip(1) as $index => $file)
                         <div class="animate-fade-in-up" style="animation-delay: {{ ($index + 1) * 0.1 }}s;">
-                            <img src="{{ $useAsset ? asset('storage/' . $file->file_path) : $file->file_path }}"
+                            <img src="{{ filter_var($file->file_path, FILTER_VALIDATE_URL) ? $file->file_path : asset('storage/' . $file->file_path) }}"
                                  alt="{{ $tourism->name }}"
                                  class="w-full h-full min-h-[190px] object-cover rounded-2xl shadow-xl gallery-image">
                         </div>
@@ -134,7 +131,7 @@
             <div class="grid md:grid-cols-2 gap-6 mb-8">
                 @foreach($displayFiles as $index => $file)
                     <div class="animate-fade-in-up" style="animation-delay: {{ $index * 0.1 }}s;">
-                        <img src="{{ $useAsset ? asset('storage/' . $file->file_path) : $file->file_path }}"
+                        <img src="{{ filter_var($file->file_path, FILTER_VALIDATE_URL) ? $file->file_path : asset('storage/' . $file->file_path) }}"
                              alt="{{ $tourism->name }}"
                              class="w-full h-64 object-cover rounded-2xl shadow-xl gallery-image">
                     </div>
@@ -146,7 +143,7 @@
             <div class="grid md:grid-cols-2 gap-6 mb-8">
                 <!-- Main Image -->
                 <div class="animate-fade-in-up">
-                    <img src="{{ $useAsset ? asset('storage/' . $displayFiles->first()->file_path) : $displayFiles->first()->file_path }}"
+                    <img src="{{ filter_var($displayFiles->first()->file_path, FILTER_VALIDATE_URL) ? $displayFiles->first()->file_path : asset('storage/' . $displayFiles->first()->file_path) }}"
                          alt="{{ $tourism->name }}"
                          class="w-full h-full min-h-[400px] object-cover rounded-2xl shadow-xl gallery-image">
                 </div>
@@ -155,7 +152,7 @@
                 <div class="grid grid-cols-2 gap-4 animate-fade-in-up" style="animation-delay: 0.1s;">
                     @foreach($displayFiles->skip(1)->take(4) as $index => $file)
                         <div class="overflow-hidden rounded-xl shadow-lg {{ $index >= 2 ? 'hidden md:block' : '' }}">
-                            <img src="{{ $useAsset ? asset('storage/' . $file->file_path) : $file->file_path }}"
+                            <img src="{{ filter_var($file->file_path, FILTER_VALIDATE_URL) ? $file->file_path : asset('storage/' . $file->file_path) }}"
                                  alt="{{ $tourism->name }}"
                                  class="w-full h-44 object-cover gallery-image">
                         </div>
@@ -164,7 +161,7 @@
                     @if($fileCount > 5)
                         <!-- More Images Indicator -->
                         <div class="hidden md:flex overflow-hidden rounded-xl shadow-lg relative">
-                            <img src="{{ $useAsset ? asset('storage/' . $displayFiles->last()->file_path) : $displayFiles->last()->file_path }}"
+                            <img src="{{ filter_var($displayFiles->last()->file_path, FILTER_VALIDATE_URL) ? $displayFiles->last()->file_path : asset('storage/' . $displayFiles->last()->file_path) }}"
                                  alt="{{ $tourism->name }}"
                                  class="w-full h-44 object-cover">
                             <div class="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
@@ -273,33 +270,6 @@
                                         <span class="text-gray-500 flex-1">-</span>
                                         <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-bold">Tutup</span>
                                     @endif
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
-
-                <!-- Facilities -->
-                @if($tourism->facilities->isNotEmpty())
-                    <div class="bg-white rounded-2xl shadow-lg p-8 border border-gray-100 animate-fade-in-up" style="animation-delay: 0.2s;">
-                        <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                            <svg class="w-7 h-7 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                            </svg>
-                            Fasilitas
-                        </h2>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            @foreach($tourism->facilities as $facility)
-                                <div class="flex items-start p-4 bg-gray-50 rounded-xl border border-gray-200 hover:shadow-md transition duration-300">
-                                    <svg class="w-6 h-6 text-green-600 mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                    </svg>
-                                    <div>
-                                        <p class="font-semibold text-gray-900">{{ $facility->name }}</p>
-                                        @if($facility->description)
-                                            <p class="text-sm text-gray-600 mt-1">{{ $facility->description }}</p>
-                                        @endif
-                                    </div>
                                 </div>
                             @endforeach
                         </div>
@@ -452,7 +422,7 @@
                     <a href="{{ route('tourism.show', $related->id) }}" class="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-2xl transition duration-300 transform hover:scale-105 hover:-translate-y-2 group block">
                         <div class="overflow-hidden h-48 bg-gray-200 relative">
                             @if($related->files->isNotEmpty())
-                                <img src="{{ $useAsset ? asset('storage/' . $related->files->first()->file_path) : $related->files->first()->file_path }}"
+                                <img src="{{ filter_var($related->files->first()->file_path, FILTER_VALIDATE_URL) ? $related->files->first()->file_path : asset('storage/' . $related->files->first()->file_path) }}"
                                      alt="{{ $related->name }}"
                                      class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
                             @else

@@ -15,6 +15,7 @@ class Category extends Model
     protected $fillable = [
         'name',
         'description',
+        'average_visit_duration',
     ];
 
     /**
