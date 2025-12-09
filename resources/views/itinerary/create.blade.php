@@ -504,14 +504,132 @@
         });
     }
 
-    // Form submission
+    // Form submission with AJAX
     $('#itineraryForm').on('submit', function(e) {
         e.preventDefault();
         
-        showNotification('Membuat itinerary...', 'info');
-
-        // Submit form
-        this.submit();
+        const formData = $(this).serialize();
+        const submitBtn = $('#generateBtn');
+        
+        // Disable button
+        submitBtn.prop('disabled', true);
+        
+        // Show loading modal
+        showLoadingModal();
+        
+        $.ajax({
+            url: '{{ route('itinerary.generate') }}',
+            type: 'POST',
+            data: formData,
+            success: function(response) {
+                if (response.success) {
+                    hideLoadingModal();
+                    showNotification(response.message, 'success');
+                    
+                    // Redirect after short delay
+                    setTimeout(() => {
+                        window.location.href = response.redirect_url;
+                    }, 500);
+                }
+            },
+            error: function(xhr) {
+                hideLoadingModal();
+                submitBtn.prop('disabled', false);
+                
+                let errorMessage = 'Gagal membuat itinerary';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    const errors = Object.values(xhr.responseJSON.errors).flat();
+                    errorMessage = errors.join(', ');
+                }
+                
+                showNotification(errorMessage, 'error');
+            }
+        });
     });
+    
+    function showLoadingModal() {
+        const modal = $('<div>', {
+            id: 'loadingModal',
+            class: 'fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center',
+            html: `
+                <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 text-center">
+                    <div class="mb-6">
+                        <!-- Animated Globe/Map Icon -->
+                        <div class="relative inline-block">
+                            <svg class="w-24 h-24 mx-auto text-blue-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div class="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                                <div class="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-2xl font-bold text-gray-900 mb-3">Sedang Membuat Itinerary</h3>
+                    
+                    <div class="space-y-2 mb-6">
+                        <div class="flex items-center justify-center text-gray-600">
+                            <svg class="w-5 h-5 mr-2 text-green-500 animate-bounce" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span class="text-sm font-medium loading-text">Menganalisis destinasi...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <!-- Progress bar -->
+                        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div class="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-full rounded-full animate-progress"></div>
+                        </div>
+                    </div>
+                    
+                    <p class="text-sm text-gray-500">
+                        Proses ini membutuhkan waktu <strong>10-30 detik</strong><br>
+                        Mohon tunggu sebentar...
+                    </p>
+                </div>
+            `
+        });
+        
+        $('body').append(modal);
+        
+        // Animated loading text
+        const loadingTexts = [
+            'Menganalisis destinasi...',
+            'Menghitung jarak optimal...',
+            'Menyusun rute terbaik...',
+            'Mengoptimalkan perjalanan...',
+            'Memproses data lokasi...',
+            'Membuat peta rute...'
+        ];
+        
+        let textIndex = 0;
+        window.loadingTextInterval = setInterval(() => {
+            textIndex = (textIndex + 1) % loadingTexts.length;
+            $('.loading-text').fadeOut(200, function() {
+                $(this).text(loadingTexts[textIndex]).fadeIn(200);
+            });
+        }, 2000);
+    }
+    
+    function hideLoadingModal() {
+        clearInterval(window.loadingTextInterval);
+        $('#loadingModal').fadeOut(300, function() {
+            $(this).remove();
+        });
+    }
 </script>
+
+<style>
+    @keyframes progress {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(400%); }
+    }
+    
+    .animate-progress {
+        animation: progress 2s ease-in-out infinite;
+    }
+</style>
 @endsection

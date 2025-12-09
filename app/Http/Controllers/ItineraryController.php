@@ -32,7 +32,7 @@ class ItineraryController extends Controller
     public function generate(Request $request)
     {
         if (!Auth::check()) {
-            return redirect()->route('login');
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
         $request->validate([
@@ -50,7 +50,7 @@ class ItineraryController extends Controller
             ->get();
 
         if ($tripCartItems->count() == 0) {
-            return redirect()->back()->with('error', 'Trip cart kosong!');
+            return response()->json(['success' => false, 'message' => 'Trip cart kosong!'], 400);
         }
 
         // Prepare starting point
@@ -94,7 +94,7 @@ class ItineraryController extends Controller
         }
 
         if (count($destinations) == 0) {
-            return redirect()->back()->with('error', 'Tambahkan minimal 1 destinasi selain titik awal!');
+            return response()->json(['success' => false, 'message' => 'Tambahkan minimal 1 destinasi selain titik awal!'], 400);
         }
 
         // Build distance matrix
@@ -124,7 +124,11 @@ class ItineraryController extends Controller
             ]
         ]);
 
-        return redirect()->route('itinerary.result');
+        return response()->json([
+            'success' => true,
+            'message' => 'Itinerary berhasil dibuat!',
+            'redirect_url' => route('itinerary.result')
+        ]);
     }
 
     /**
@@ -514,7 +518,7 @@ class ItineraryController extends Controller
                             'coordinates' => $decodedCoordinates
                         ],
                         'coordinates' => $coordinates,
-                        'summary' => $data['routes'][0]['summary'] ?? null,
+                        'summary' => isset($data['routes'][0]['summary']) ? $data['routes'][0]['summary'] : null,
                     ];
                 }
             }
@@ -605,7 +609,7 @@ class ItineraryController extends Controller
         // Log route geometry for debugging
         Log::info('Route Geometry Data:', [
             'has_geometry' => isset($itineraryData['route_geometry']),
-            'geometry_type' => $itineraryData['route_geometry']['type'] ?? 'unknown',
+            'geometry_type' => isset($itineraryData['route_geometry']['type']) ? $itineraryData['route_geometry']['type'] : 'unknown',
             'has_coordinates' => isset($itineraryData['route_geometry']['coordinates']),
             'coordinates_count' => isset($itineraryData['route_geometry']['coordinates']) ? count($itineraryData['route_geometry']['coordinates']) : 0,
             'has_geometry_obj' => isset($itineraryData['route_geometry']['geometry']),

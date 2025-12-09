@@ -40,22 +40,28 @@ class TripCartController extends Controller
                 ->with('tourism')
                 ->get();
 
-            // Create distance cache for each pair
+            // Create distance cache for each pair (both directions)
             foreach ($otherTourisms as $otherCart) {
                 $otherTourism = $otherCart->tourism;
                 
-                // Check if distance cache already exists
-                $existingCache = DistanceCache::where(function($query) use ($currentTourism, $otherTourism) {
-                    $query->where('from_id', $currentTourism->id)
-                          ->where('to_id', $otherTourism->id);
-                })->orWhere(function($query) use ($currentTourism, $otherTourism) {
-                    $query->where('from_id', $otherTourism->id)
-                          ->where('to_id', $currentTourism->id);
-                })->first();
+                // Check if distance cache from current to other exists
+                $cacheCurrentToOther = DistanceCache::where('from_id', $currentTourism->id)
+                    ->where('to_id', $otherTourism->id)
+                    ->first();
 
-                if (!$existingCache) {
-                    // Calculate distance and create cache
+                if (!$cacheCurrentToOther) {
+                    // Calculate distance from current to other
                     $this->createDistanceCache($currentTourism, $otherTourism);
+                }
+
+                // Check if distance cache from other to current exists
+                $cacheOtherToCurrent = DistanceCache::where('from_id', $otherTourism->id)
+                    ->where('to_id', $currentTourism->id)
+                    ->first();
+
+                if (!$cacheOtherToCurrent) {
+                    // Calculate distance from other to current
+                    $this->createDistanceCache($otherTourism, $currentTourism);
                 }
             }
 
@@ -137,6 +143,7 @@ class TripCartController extends Controller
 
         return view('trip-cart.index', compact('tripCart'));
     }
+    
     private function calculateDistance($lat1, $lon1, $lat2, $lon2)
     {
         try {
