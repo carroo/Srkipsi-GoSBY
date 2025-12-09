@@ -8,174 +8,153 @@ use App\Models\DistanceCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ItineraryController extends Controller
 {
-    /**
-     * Show the form to create itinerary
-     */
     public function create()
     {
         if (!Auth::check()) {
             return redirect()->route('login');
         }
 
-        // Get all trip cart items with tourism data
+        // Ambil semua item trip cart dengan data tourism
         $tripCartItems = TripCart::where('user_id', Auth::id())
-            ->with(['tourism.files', 'tourism.prices', 'tourism.categories'])
+            ->with(['tourism.files', 'tourism.prices', 'tourism.categories', 'tourism.hours'])
             ->get();
 
         return view('itinerary.create', compact('tripCartItems'));
     }
 
     /**
-     * Generate itinerary based on user preferences
+     * Generate itinerary using TSP with Dynamic Programming
      */
-    public function store(Request $request)
+    public function generate(Request $request)
     {
-        $validated = $request->validate([
-            'duration_days' => 'required|integer|min:1|max:30',
-            'tolerance_minutes' => 'required|integer|min:0|max:120',
-            'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i',
-            'start_location_type' => 'required|in:destination,custom',
-            'end_location_type' => 'required|in:destination,custom',
-            'tourism_ids' => 'required|array|min:1',
-            'tourism_ids.*' => 'exists:tourism,id',
-            'start_date' => 'nullable|date',
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'travel_date' => 'required|date',
+            'start_point_type' => 'required|in:from_cart,custom',
+            'start_tourism_id' => 'required_if:start_point_type,from_cart|nullable|exists:tourism,id',
+            'start_lat' => 'required_if:start_point_type,custom|nullable|numeric',
+            'start_long' => 'required_if:start_point_type,custom|nullable|numeric',
         ]);
 
-        // Get tourism locations with hours
-        $tourismIds = $validated['tourism_ids'];
-        $tourismLocations = Tourism::whereIn('id', $tourismIds)
-            ->with('hours')
-            ->get()
-            ->keyBy('id');
+        // Get all tourism destinations from trip cart
+        $tripCartItems = TripCart::where('user_id', Auth::id())
+            ->with('tourism')
+            ->get();
 
-        // Prepare start location
-        if ($validated['start_location_type'] === 'destination') {
-            $startTourism = $tourismLocations[$request->start_destination_id];
-            $startLocation = [
-                'id' => 'start_' . $startTourism->id,
+        if ($tripCartItems->count() == 0) {
+            return redirect()->back()->with('error', 'Trip cart kosong!');
+        }
+
+        // Prepare starting point
+        $startPoint = [];
+        if ($request->start_point_type === 'from_cart') {
+            $startTourism = Tourism::findOrFail($request->start_tourism_id);
+            $startPoint = [
+                'id' => $startTourism->id,
                 'name' => $startTourism->name,
-                'latitude' => $startTourism->latitude,
-                'longitude' => $startTourism->longitude,
+                'lat' => $startTourism->latitude,
+                'long' => $startTourism->longitude,
+                'type' => 'tourism'
             ];
         } else {
-            $startLocation = [
-                'id' => 'start_custom',
-                'name' => $request->start_location_name ?? 'Titik Awal',
-                'latitude' => $request->start_latitude,
-                'longitude' => $request->start_longitude,
+            $startPoint = [
+                'id' => 0, // Custom location
+                'name' => 'Lokasi Awal',
+                'lat' => $request->start_lat,
+                'long' => $request->start_long,
+                'type' => 'custom'
             ];
         }
 
-        // Prepare end location
-        if ($validated['end_location_type'] === 'destination') {
-            $endTourism = $tourismLocations[$request->end_destination_id];
-            $endLocation = [
-                'id' => 'end_' . $endTourism->id,
-                'name' => $endTourism->name,
-                'latitude' => $endTourism->latitude,
-                'longitude' => $endTourism->longitude,
-            ];
-        } else {
-            $endLocation = [
-                'id' => 'end_custom',
-                'name' => $request->end_location_name ?? 'Titik Akhir',
-                'latitude' => $request->end_latitude,
-                'longitude' => $request->end_longitude,
+        // Get all destinations (exclude starting point if from cart)
+        $destinations = [];
+        foreach ($tripCartItems as $item) {
+            if ($startPoint['type'] === 'tourism' && $item->tourism_id == $startPoint['id']) {
+                continue; // Skip starting point
+            }
+            
+            // Load tourism hours relationship
+            $item->tourism->load('hours');
+            
+            $destinations[] = [
+                'id' => $item->tourism_id,
+                'name' => $item->tourism->name,
+                'lat' => $item->tourism->latitude,
+                'long' => $item->tourism->longitude,
+                'tourism' => $item->tourism
             ];
         }
 
-        // Build distance matrix with caching
-        $distanceMatrix = $this->buildDistanceMatrix($tourismLocations, $startLocation, $endLocation);
-        // dd($distanceMatrix);
+        if (count($destinations) == 0) {
+            return redirect()->back()->with('error', 'Tambahkan minimal 1 destinasi selain titik awal!');
+        }
 
-        // Get start date for day of week calculation
-        $startDate = $validated['start_date'] ?? now()->format('Y-m-d');
-        
-        // Implement Dynamic Programming for optimal route
-        $optimalRoute = $this->calculateOptimalRoute(
-            $tourismLocations,
-            $distanceMatrix,
-            $startLocation,
-            $endLocation,
-            $validated['duration_days'],
-            $validated['start_time'],
-            $validated['end_time'],
-            $startDate
-        );
+        // Build distance matrix
+        $distanceMatrix = $this->buildDistanceMatrix($startPoint, $destinations);
+
+        // Solve TSP using Dynamic Programming
+        $optimalRoute = $this->solveTSP($distanceMatrix, count($destinations));
+
+        // Build final itinerary
+        $itinerary = $this->buildItinerary($startPoint, $destinations, $optimalRoute, $distanceMatrix);
+
+        // Get route geometry for map visualization
+        $routeGeometry = $this->getRouteGeometry($startPoint, $destinations, $optimalRoute);
 
         // Store in session for result page
         session([
-            'itinerary_result' => [
-                'route' => $optimalRoute['result'],
-                'dp_steps' => $optimalRoute['dp_steps'],
+            'itinerary_data' => [
+                'name' => $request->name,
+                'travel_date' => $request->travel_date,
+                'start_point' => $startPoint,
+                'destinations' => $destinations,
+                'route' => $itinerary,
+                'total_distance' => $itinerary['total_distance'],
+                'total_duration' => $itinerary['total_duration'],
                 'distance_matrix' => $distanceMatrix,
-                'start_location' => $startLocation,
-                'end_location' => $endLocation,
-                'settings' => [
-                    'duration_days' => $validated['duration_days'],
-                    'start_time' => $validated['start_time'],
-                    'end_time' => $validated['end_time'],
-                    'tolerance_minutes' => $validated['tolerance_minutes'],
-                ],
-                'alerts' => $optimalRoute['alerts'] ?? [],
-            ],
+                'route_geometry' => $routeGeometry,
+            ]
         ]);
 
         return redirect()->route('itinerary.result');
     }
 
     /**
-     * Build distance matrix with database caching
+     * Build distance matrix between all points
      */
-    private function buildDistanceMatrix($tourismLocations, $startLocation, $endLocation)
+    private function buildDistanceMatrix($startPoint, $destinations)
     {
-        $matrix = [];
-        $allLocations = collect([]);
-        
-        // Add start location
-        $allLocations->push($startLocation);
-        
-        // Add tourism locations
-        foreach ($tourismLocations as $tourism) {
-            $allLocations->push([
-                'id' => $tourism->id,
-                'name' => $tourism->name,
-                'latitude' => $tourism->latitude,
-                'longitude' => $tourism->longitude,
-            ]);
-        }
-        
-        // Add end location
-        $allLocations->push($endLocation);
+        $points = array_merge([$startPoint], $destinations);
+        $n = count($points);
+        $matrix = array_fill(0, $n, array_fill(0, $n, 0));
 
-        // Build matrix
-        foreach ($allLocations as $from) {
-            $matrix[$from['id']] = [];
-            
-            foreach ($allLocations as $to) {
-                if ($from['id'] === $to['id']) {
-                    $matrix[$from['id']][$to['id']] = [
-                        'distance' => 0,
-                        'duration' => 0,
-                    ];
+        for ($i = 0; $i < $n; $i++) {
+            for ($j = 0; $j < $n; $j++) {
+                if ($i == $j) {
+                    $matrix[$i][$j] = 0;
                     continue;
                 }
 
-                // Get distance and duration (with caching)
-                $distanceData = $this->getDistanceWithCache(
-                    $from['id'],
-                    $to['id'],
-                    $from['latitude'],
-                    $from['longitude'],
-                    $to['latitude'],
-                    $to['longitude']
-                );
+                $fromPoint = $points[$i];
+                $toPoint = $points[$j];
 
-                $matrix[$from['id']][$to['id']] = $distanceData;
+                // Check if distance exists in cache
+                $distance = $this->getDistanceFromCache($fromPoint, $toPoint);
+
+                if ($distance === null) {
+                    // Calculate and cache the distance
+                    $distance = $this->calculateAndCacheDistance($fromPoint, $toPoint);
+                }
+
+                $matrix[$i][$j] = $distance;
             }
         }
 
@@ -183,52 +162,77 @@ class ItineraryController extends Controller
     }
 
     /**
-     * Get distance with database caching
+     * Get distance from cache
      */
-    private function getDistanceWithCache($fromId, $toId, $fromLat, $fromLon, $toLat, $toLon)
+    private function getDistanceFromCache($fromPoint, $toPoint)
     {
-        // Only cache for tourism-to-tourism distances (both IDs are numeric)
-        if (is_numeric($fromId) && is_numeric($toId)) {
-            // Check if distance exists in cache
-            $cache = DistanceCache::where('from_id', $fromId)
-                ->where('to_id', $toId)
-                ->first();
+        // Check cache using coordinates (works for both tourism and custom locations)
+        $cache = DistanceCache::where(function($query) use ($fromPoint, $toPoint) {
+            $query->where('from_lat', $fromPoint['lat'])
+                  ->where('from_long', $fromPoint['long'])
+                  ->where('to_lat', $toPoint['lat'])
+                  ->where('to_long', $toPoint['long']);
+        })->orWhere(function($query) use ($fromPoint, $toPoint) {
+            // Check reverse direction (sometimes same route can have different values)
+            $query->where('from_lat', $toPoint['lat'])
+                  ->where('from_long', $toPoint['long'])
+                  ->where('to_lat', $fromPoint['lat'])
+                  ->where('to_long', $fromPoint['long']);
+        })->first();
 
-            if ($cache) {
-                return [
-                    'distance' => $cache->distance,
-                    'duration' => $cache->duration,
-                    'cached' => true,
-                ];
-            }
-
-            // Calculate distance using API
-            $result = $this->calculateDistanceAndDuration($fromLat, $fromLon, $toLat, $toLon);
-
-            // Save to cache for future use
-            try {
-                DistanceCache::create([
-                    'from_id' => $fromId,
-                    'to_id' => $toId,
-                    'distance' => $result['distance'],
-                    'duration' => $result['duration'],
-                ]);
-            } catch (\Exception $e) {
-                // Ignore duplicate key errors
-            }
-
-            $result['cached'] = false;
-            return $result;
-        }
-
-        // For custom locations, calculate without caching
-        return $this->calculateDistanceAndDuration($fromLat, $fromLon, $toLat, $toLon);
+        return $cache ? $cache->distance : null;
     }
 
     /**
-     * Calculate distance and duration using API or fallback
+     * Calculate distance using TripCartController method and cache it
      */
-    private function calculateDistanceAndDuration($lat1, $lon1, $lat2, $lon2)
+    private function calculateAndCacheDistance($fromPoint, $toPoint)
+    {
+        try {
+            $result = $this->calculateDistance(
+                $fromPoint['lat'],
+                $fromPoint['long'],
+                $toPoint['lat'],
+                $toPoint['long']
+            );
+
+            $distance = $result['distance']; // in meters
+            $duration = $result['duration']; // in seconds
+
+            // Always cache the distance regardless of type
+            try {
+                DistanceCache::create([
+                    'from_id' => isset($fromPoint['id']) && $fromPoint['id'] > 0 ? $fromPoint['id'] : null,
+                    'to_id' => isset($toPoint['id']) && $toPoint['id'] > 0 ? $toPoint['id'] : null,
+                    'from_lat' => $fromPoint['lat'],
+                    'from_long' => $fromPoint['long'],
+                    'to_lat' => $toPoint['lat'],
+                    'to_long' => $toPoint['long'],
+                    'distance' => (int) $distance,
+                    'duration' => (int) $duration,
+                ]);
+            } catch (\Exception $cacheError) {
+                // Ignore duplicate cache entries
+                Log::warning('Cache entry might already exist: ' . $cacheError->getMessage());
+            }
+
+            return (int) $distance;
+        } catch (\Exception $e) {
+            Log::error('Failed to calculate distance: ' . $e->getMessage());
+            // Fallback: return straight line distance
+            return (int) ($this->calculateDistanceHaversine(
+                $fromPoint['lat'],
+                $fromPoint['long'],
+                $toPoint['lat'],
+                $toPoint['long']
+            ) * 1000);
+        }
+    }
+
+    /**
+     * Calculate distance using OpenRouteService API (same as TripCartController)
+     */
+    private function calculateDistance($lat1, $lon1, $lat2, $lon2)
     {
         try {
             $apiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjIyMTZlOWViNmQwYjQ1MTRhODE5NDJlNzM2MDFjNTI1IiwiaCI6Im11cm11cjY0In0';
@@ -242,9 +246,7 @@ class ItineraryController extends Controller
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Accept: application/json'
-            ]);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
             
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -256,607 +258,360 @@ class ItineraryController extends Controller
                 if (isset($data['features'][0]['properties']['segments'][0])) {
                     $segment = $data['features'][0]['properties']['segments'][0];
                     return [
-                        'distance' => (int) $segment['distance'], // in meters
-                        'duration' => (int) $segment['duration'], // in seconds
+                        'distance' => $segment['distance'],
+                        'duration' => $segment['duration']
                     ];
                 }
             }
             
-            // Fallback to Haversine
-            return $this->calculateDistanceHaversineFallback($lat1, $lon1, $lat2, $lon2);
+            // Fallback
+            $distanceKm = $this->calculateDistanceHaversine($lat1, $lon1, $lat2, $lon2);
+            return [
+                'distance' => $distanceKm * 1000,
+                'duration' => ($distanceKm) * (3600 / 40)
+            ];
             
         } catch (\Exception $e) {
-            return $this->calculateDistanceHaversineFallback($lat1, $lon1, $lat2, $lon2);
+            $distanceKm = $this->calculateDistanceHaversine($lat1, $lon1, $lat2, $lon2);
+            return [
+                'distance' => $distanceKm * 1000,
+                'duration' => ($distanceKm) * (3600 / 40)
+            ];
         }
     }
 
     /**
-     * Haversine formula fallback (returns distance in meters and estimated duration)
+     * Haversine distance calculation
      */
-    private function calculateDistanceHaversineFallback($lat1, $lon1, $lat2, $lon2)
+    private function calculateDistanceHaversine($lat1, $lon1, $lat2, $lon2)
     {
-        $earthRadius = 6371000; // Earth's radius in meters
+        $earthRadius = 6371; // km
 
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLon = deg2rad($lon2 - $lon1);
+        $lat1Rad = deg2rad($lat1);
+        $lat2Rad = deg2rad($lat2);
+        $deltaLat = deg2rad($lat2 - $lat1);
+        $deltaLon = deg2rad($lon2 - $lon1);
 
-        $a = sin($dLat / 2) * sin($dLat / 2) +
-             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
-             sin($dLon / 2) * sin($dLon / 2);
-
+        $a = sin($deltaLat / 2) * sin($deltaLat / 2) +
+             cos($lat1Rad) * cos($lat2Rad) *
+             sin($deltaLon / 2) * sin($deltaLon / 2);
+        
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
-        $distance = (int) ($earthRadius * $c);
 
-        // Estimate duration: assume average speed 40 km/h
-        $duration = (int) (($distance / 1000) / 40 * 3600);
-
-        return [
-            'distance' => $distance,
-            'duration' => $duration,
-        ];
+        return round($earthRadius * $c, 2);
     }
 
     /**
-     * Calculate optimal route using Dynamic Programming (Bitmask DP for TSP)
+     * Solve TSP using Dynamic Programming (Held-Karp algorithm)
      */
-    private function calculateOptimalRoute($tourismLocations, $distanceMatrix, $startLocation, $endLocation, $days, $startTime, $endTime, $startDate = null)
+    private function solveTSP($distanceMatrix, $n)
     {
-        // Array to store all DP steps for visualization
-        $dpSteps = [];
+        // n is number of destinations (excluding start point)
+        // Start point is always index 0
         
-        // Convert times to minutes
-        $startMinutes = $this->timeToMinutes($startTime);
-        $endMinutes = $this->timeToMinutes($endTime);
-        $dailyAvailableMinutes = $endMinutes - $startMinutes;
+        if ($n == 0) return [];
+        if ($n == 1) return [1]; // Only one destination
 
-        // Parse start date for day of week calculation
-        $startDate = $startDate ?? now()->format('Y-m-d');
-        $startDayOfWeek = date('w', strtotime($startDate)); // 0=Sunday, 6=Saturday
-
-        $dpSteps[] = [
-            'step' => 'INITIALIZATION',
-            'description' => 'Inisialisasi parameter Dynamic Programming',
-            'data' => [
-                'total_days' => $days,
-                'start_date' => $startDate,
-                'start_day_of_week' => ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][$startDayOfWeek],
-                'start_time' => $startTime,
-                'end_time' => $endTime,
-                'start_minutes' => $startMinutes,
-                'end_minutes' => $endMinutes,
-                'daily_available_minutes' => $dailyAvailableMinutes,
-                'total_locations' => count($tourismLocations),
-            ],
-        ];
-
-        // Prepare locations
-        $locations = $tourismLocations->values()->toArray();
-        $n = count($locations);
-
-        $dpSteps[] = [
-            'step' => 'LOCATION_PREPARATION',
-            'description' => 'Menyiapkan daftar lokasi untuk DP',
-            'data' => [
-                'n' => $n,
-                'locations' => collect($locations)->map(function($loc, $idx) {
-                    $hoursInfo = 'Selalu buka';
-                    if (isset($loc['hours']) && count($loc['hours']) > 0) {
-                        $hoursInfo = collect($loc['hours'])->map(function($h) {
-                            $day = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][$h['day']];
-                            return "{$day}: {$h['open_time']}-{$h['close_time']}";
-                        })->join(', ');
-                    }
-                    
-                    return [
-                        'index' => $idx,
-                        'id' => $loc['id'],
-                        'name' => $loc['name'],
-                        'hours' => $hoursInfo,
-                    ];
-                })->toArray(),
-            ],
-        ];
-
-        // DP Table: dp[mask][last] = minimum distance to visit all locations in mask, ending at last
-        // mask: bitmask representing visited locations
-        // last: index of last visited location
-        $INF = PHP_INT_MAX / 2;
+        // DP table: dp[mask][i] = minimum distance to visit cities in mask, ending at city i
         $dp = [];
         $parent = [];
         
-        // Initialize DP table
+        // Initialize
         for ($mask = 0; $mask < (1 << $n); $mask++) {
-            $dp[$mask] = [];
-            $parent[$mask] = [];
-            for ($i = 0; $i < $n; $i++) {
-                $dp[$mask][$i] = $INF;
-                $parent[$mask][$i] = -1;
-            }
+            $dp[$mask] = array_fill(0, $n + 1, PHP_INT_MAX);
+            $parent[$mask] = array_fill(0, $n + 1, -1);
         }
 
-        $dpSteps[] = [
-            'step' => 'DP_TABLE_INIT',
-            'description' => 'Inisialisasi tabel DP dengan bitmask',
-            'data' => [
-                'table_size' => '2^' . $n . ' x ' . $n,
-                'total_states' => (1 << $n) * $n,
-                'infinity_value' => 'INF',
-                'explanation' => 'dp[mask][i] = jarak minimum untuk mengunjungi lokasi dalam mask, berakhir di i',
-            ],
-        ];
-
-        // Base case: Start from start location to each location
-        $baseDistances = [];
-        for ($i = 0; $i < $n; $i++) {
-            $distData = $distanceMatrix[$startLocation['id']][$locations[$i]['id']];
-            $travelMinutes = ceil($distData['duration'] / 60);
-            
-            if ($travelMinutes + 60 <= $dailyAvailableMinutes) {
-                $dp[1 << $i][$i] = $distData['distance'];
-                $baseDistances[] = [
-                    'to_index' => $i,
-                    'to_name' => $locations[$i]['name'],
-                    'distance' => $distData['distance'],
-                    'duration_minutes' => $travelMinutes,
-                    'feasible' => true,
-                ];
-            } else {
-                $baseDistances[] = [
-                    'to_index' => $i,
-                    'to_name' => $locations[$i]['name'],
-                    'distance' => $distData['distance'],
-                    'duration_minutes' => $travelMinutes,
-                    'feasible' => false,
-                    'reason' => 'Waktu tidak cukup',
-                ];
-            }
+        // Base case: starting from city 0 (start point) to each destination
+        for ($i = 1; $i <= $n; $i++) {
+            $dp[1 << ($i - 1)][$i] = $distanceMatrix[0][$i];
         }
 
-        $dpSteps[] = [
-            'step' => 'DP_BASE_CASE',
-            'description' => 'Base case: jarak dari titik awal ke setiap lokasi',
-            'data' => [
-                'from' => $startLocation['name'],
-                'distances' => $baseDistances,
-            ],
-        ];
-
-        // DP Transition: Try all possible next locations
-        $transitionCount = 0;
+        // Fill DP table
         for ($mask = 0; $mask < (1 << $n); $mask++) {
-            for ($last = 0; $last < $n; $last++) {
-                // Check if last is in mask
-                if (!(($mask >> $last) & 1)) continue;
-                if ($dp[$mask][$last] == $INF) continue;
+            for ($last = 1; $last <= $n; $last++) {
+                if (!($mask & (1 << ($last - 1)))) continue;
+                if ($dp[$mask][$last] == PHP_INT_MAX) continue;
 
-                // Try to go to next location
-                for ($next = 0; $next < $n; $next++) {
-                    // Check if next is already visited
-                    if (($mask >> $next) & 1) continue;
+                for ($next = 1; $next <= $n; $next++) {
+                    if ($mask & (1 << ($next - 1))) continue; // Already visited
 
-                    $distData = $distanceMatrix[$locations[$last]['id']][$locations[$next]['id']];
-                    $newDist = $dp[$mask][$last] + $distData['distance'];
-                    $newMask = $mask | (1 << $next);
+                    $newMask = $mask | (1 << ($next - 1));
+                    $newDist = $dp[$mask][$last] + $distanceMatrix[$last][$next];
 
                     if ($newDist < $dp[$newMask][$next]) {
                         $dp[$newMask][$next] = $newDist;
                         $parent[$newMask][$next] = $last;
-                        
-                        $transitionCount++;
-                        
-                        // Log significant transitions
-                        if ($transitionCount <= 20 || $mask == (1 << $n) - 1) {
-                            $visitedLocs = [];
-                            for ($i = 0; $i < $n; $i++) {
-                                if (($mask >> $i) & 1) {
-                                    $visitedLocs[] = $locations[$i]['name'];
-                                }
-                            }
-                            
-                            $dpSteps[] = [
-                                'step' => 'DP_TRANSITION',
-                                'description' => 'Transisi DP: mencoba perpindahan ke lokasi baru',
-                                'data' => [
-                                    'mask' => decbin($mask) . ' → ' . decbin($newMask),
-                                    'visited_before' => $visitedLocs,
-                                    'from' => $locations[$last]['name'],
-                                    'to' => $locations[$next]['name'],
-                                    'distance_last_to_next' => number_format($distData['distance'] / 1000, 2) . ' km',
-                                    'dp_old' => $dp[$mask][$last],
-                                    'dp_new' => $newDist,
-                                    'is_better' => true,
-                                ],
-                            ];
-                        }
                     }
                 }
             }
         }
 
-        $dpSteps[] = [
-            'step' => 'DP_COMPLETE',
-            'description' => 'DP table lengkap dihitung',
-            'data' => [
-                'total_transitions' => $transitionCount,
-                'states_computed' => (1 << $n) * $n,
-            ],
-        ];
-
-        // Find optimal route considering time constraints for multi-day
-        $result = $this->reconstructRouteMultiDay(
-            $dp, 
-            $parent, 
-            $locations, 
-            $distanceMatrix, 
-            $startLocation, 
-            $endLocation, 
-            $days, 
-            $dailyAvailableMinutes,
-            $dpSteps,
-            $n,
-            $startTime,
-            $startDayOfWeek
-        );
-
-        // Check if actual days needed is less than requested
-        $alerts = [];
-        $actualDays = count($result['days']);
-        if ($actualDays < $days) {
-            $alerts[] = [
-                'type' => 'info',
-                'title' => 'Itinerary Lebih Efisien',
-                'message' => "Anda memasukkan {$days} hari, tetapi semua destinasi dapat dikunjungi dalam {$actualDays} hari saja dengan waktu yang tersedia.",
-            ];
-        }
-
-        return [
-            'result' => $result,
-            'dp_steps' => $dpSteps,
-            'alerts' => $alerts,
-        ];
-    }
-
-    /**
-     * Reconstruct route from DP table with multi-day support
-     */
-    private function reconstructRouteMultiDay($dp, $parent, $locations, $distanceMatrix, $startLocation, $endLocation, $maxDays, $dailyAvailableMinutes, &$dpSteps, $n, $startTime, $startDayOfWeek)
-    {
-        $INF = PHP_INT_MAX / 2;
-        
-        // Find best ending location from DP table
+        // Find the best ending city
         $fullMask = (1 << $n) - 1;
-        $minDist = $INF;
-        $bestLast = -1;
-        
-        $candidates = [];
-        for ($i = 0; $i < $n; $i++) {
-            if ($dp[$fullMask][$i] < $INF) {
-                $candidates[] = [
-                    'index' => $i,
-                    'name' => $locations[$i]['name'],
-                    'total_distance' => $dp[$fullMask][$i],
-                    'is_best' => false,
-                ];
-                
-                if ($dp[$fullMask][$i] < $minDist) {
-                    $minDist = $dp[$fullMask][$i];
-                    $bestLast = $i;
-                }
+        $minDist = PHP_INT_MAX;
+        $lastCity = -1;
+
+        for ($i = 1; $i <= $n; $i++) {
+            $dist = $dp[$fullMask][$i];
+            if ($dist < $minDist) {
+                $minDist = $dist;
+                $lastCity = $i;
             }
         }
 
-        // Mark best candidate
-        foreach ($candidates as &$c) {
-            if ($c['index'] == $bestLast) {
-                $c['is_best'] = true;
-            }
-        }
-
-        $dpSteps[] = [
-            'step' => 'FIND_OPTIMAL_ENDING',
-            'description' => 'Mencari lokasi akhir optimal dari tabel DP',
-            'data' => [
-                'full_mask' => decbin($fullMask) . ' (semua lokasi dikunjungi)',
-                'candidates' => $candidates,
-                'best_ending' => $bestLast >= 0 ? $locations[$bestLast]['name'] : 'none',
-                'min_distance_km' => $bestLast >= 0 ? number_format($minDist / 1000, 2) : 'N/A',
-            ],
-        ];
-
-        // Backtrack to get the path
+        // Reconstruct path
         $path = [];
         $mask = $fullMask;
-        $current = $bestLast;
+        $current = $lastCity;
 
         while ($current != -1) {
-            array_unshift($path, $current);
+            $path[] = $current;
             $prev = $parent[$mask][$current];
             if ($prev != -1) {
-                $mask ^= (1 << $current);
+                $mask ^= (1 << ($current - 1));
             }
             $current = $prev;
         }
 
-        $dpSteps[] = [
-            'step' => 'BACKTRACK_PATH',
-            'description' => 'Backtrack dari tabel DP untuk mendapatkan urutan optimal',
-            'data' => [
-                'path_indices' => $path,
-                'path_names' => array_map(fn($i) => $locations[$i]['name'], $path),
-                'explanation' => 'Menggunakan parent pointer untuk merekonstruksi path optimal',
-            ],
+        return array_reverse($path);
+    }
+
+    /**
+     * Build final itinerary from optimal route
+     */
+    private function buildItinerary($startPoint, $destinations, $optimalRoute, $distanceMatrix)
+    {
+        $route = [];
+        $totalDistance = 0;
+        $totalDuration = 0;
+        $currentIndex = 0; // Start point index
+
+        // Add start point
+        $route[] = [
+            'order' => 0,
+            'destination' => $startPoint,
+            'distance_from_previous' => 0,
+            'duration_from_previous' => 0,
         ];
 
-        // Split path into multiple days considering time constraints
-        $result = [
-            'days' => [],
-            'total_distance' => 0,
-            'total_duration' => 0,
-        ];
-
-        $currentDay = 1;
-        $currentTime = 0;
-        $currentLocation = $startLocation;
-        $currentDayOfWeek = $startDayOfWeek;
-        
-        $dayPlan = [
-            'day' => 1,
-            'day_of_week' => $currentDayOfWeek,
-            'locations' => [],
-            'start_location' => $startLocation,
-            'end_location' => null,
-            'total_distance' => 0,
-            'total_duration' => 0,
-        ];
-
-        $dpSteps[] = [
-            'step' => 'SPLIT_INTO_DAYS',
-            'description' => 'Membagi path optimal berdasarkan constraint waktu harian',
-            'data' => [
-                'max_days_requested' => $maxDays,
-                'daily_time_limit' => $dailyAvailableMinutes . ' minutes',
-                'note' => 'Sistem akan menggunakan hari seminimal mungkin',
-            ],
-        ];
-
-        foreach ($path as $idx => $locIdx) {
-            $location = $locations[$locIdx];
-            $distData = $distanceMatrix[$currentLocation['id']][$location['id']];
-            $travelMinutes = ceil($distData['duration'] / 60);
-            $visitMinutes = 60;
-
-            // Calculate estimated arrival time
-            $estimatedArrivalMinutes = $currentTime + $travelMinutes;
-            $estimatedArrivalTime = sprintf('%02d:%02d', 
-                floor(($this->timeToMinutes($startTime) + $estimatedArrivalMinutes) / 60) % 24,
-                ($this->timeToMinutes($startTime) + $estimatedArrivalMinutes) % 60
-            );
-
-            // Check if tourism is open at arrival time
-            $openCheck = $this->isTourismOpen($location, $currentDayOfWeek, $estimatedArrivalTime);
-
-            // Check if we need to move to next day
-            if ($currentTime + $travelMinutes + $visitMinutes > $dailyAvailableMinutes || !$openCheck['is_open']) {
-                // Check if we still have days available
-                if ($currentDay >= $maxDays) {
-                    $dpSteps[] = [
-                        'step' => 'DAY_LIMIT_REACHED',
-                        'description' => 'Batas hari maksimal tercapai',
-                        'data' => [
-                            'max_days' => $maxDays,
-                            'unvisited_locations' => count($path) - $idx,
-                            'warning' => 'Tidak semua lokasi dapat dikunjungi dalam batas waktu',
-                        ],
-                    ];
-                    break; // Stop if max days reached
-                }
-                
-                // Save current day
-                $result['days'][] = $dayPlan;
-                $result['total_distance'] += $dayPlan['total_distance'];
-                $result['total_duration'] += $dayPlan['total_duration'];
-
-                $closeReason = !$openCheck['is_open'] ? $openCheck['reason'] : 'Waktu tidak cukup untuk lokasi berikutnya';
-
-                $dpSteps[] = [
-                    'step' => "DAY_{$currentDay}_COMPLETE",
-                    'description' => "Hari {$currentDay} selesai, lanjut ke hari berikutnya",
-                    'data' => [
-                        'day_completed' => $currentDay,
-                        'locations_visited' => count($dayPlan['locations']),
-                        'time_used' => $currentTime . ' minutes',
-                        'reason' => $closeReason,
-                    ],
-                ];
-
-                // Start new day
-                $currentDay++;
-                $currentTime = 0;
-                $currentDayOfWeek = ($currentDayOfWeek + 1) % 7;
-                
-                // For day 2+, start from the end location of previous day
-                $lastLocOfPrevDay = end($result['days'])['locations'];
-                $prevDayEndLocation = end($lastLocOfPrevDay)['tourism'];
-                
-                $dayPlan = [
-                    'day' => $currentDay,
-                    'day_of_week' => $currentDayOfWeek,
-                    'locations' => [],
-                    'start_location' => $prevDayEndLocation,
-                    'end_location' => null,
-                    'total_distance' => 0,
-                    'total_duration' => 0,
-                ];
-                
-                // Recalculate from new starting point
-                $currentLocation = $prevDayEndLocation;
-                $distData = $distanceMatrix[$currentLocation['id']][$location['id']];
-                $travelMinutes = ceil($distData['duration'] / 60);
-                
-                // Recalculate arrival time for new day
-                $estimatedArrivalMinutes = $currentTime + $travelMinutes;
-                $estimatedArrivalTime = sprintf('%02d:%02d', 
-                    floor(($this->timeToMinutes($startTime) + $estimatedArrivalMinutes) / 60) % 24,
-                    ($this->timeToMinutes($startTime) + $estimatedArrivalMinutes) % 60
-                );
-                
-                // Recheck if open on new day
-                $openCheck = $this->isTourismOpen($location, $currentDayOfWeek, $estimatedArrivalTime);
-            }
-
-            // Add location to current day with open status
-            $dayPlan['locations'][] = [
-                'tourism' => $location,
-                'distance_from_previous' => $distData['distance'],
-                'duration_from_previous' => $distData['duration'],
-                'travel_minutes' => $travelMinutes,
-                'arrival_time' => $estimatedArrivalTime,
-                'is_open' => $openCheck['is_open'],
-                'open_status' => $openCheck['is_open'] ? 'Buka' : $openCheck['reason'],
-            ];
-
-            $dayPlan['total_distance'] += $distData['distance'];
-            $dayPlan['total_duration'] += $distData['duration'];
-            $currentTime += $travelMinutes + $visitMinutes;
-            $currentLocation = $location;
-
-            $dpSteps[] = [
-                'step' => "ADD_TO_DAY_{$currentDay}",
-                'description' => "Menambahkan lokasi ke hari {$currentDay}",
-                'data' => [
-                    'location' => $location['name'],
-                    'arrival_time' => $estimatedArrivalTime,
-                    'is_open' => $openCheck['is_open'],
-                    'open_status' => $openCheck['is_open'] ? 'Buka' : $openCheck['reason'],
-                    'time_used' => $currentTime . ' minutes',
-                    'time_remaining' => ($dailyAvailableMinutes - $currentTime) . ' minutes',
-                ],
-            ];
-        }
-
-        // Add last day and return to end location
-        if (!empty($dayPlan['locations'])) {
-            $lastLoc = end($dayPlan['locations']);
-            $returnDistData = $distanceMatrix[$lastLoc['tourism']['id']][$endLocation['id']];
-            $dayPlan['return_distance'] = $returnDistData['distance'];
-            $dayPlan['return_duration'] = $returnDistData['duration'];
-            $dayPlan['total_distance'] += $returnDistData['distance'];
-            $dayPlan['total_duration'] += $returnDistData['duration'];
-            $dayPlan['end_location'] = $endLocation;
+        // Add destinations in optimal order
+        foreach ($optimalRoute as $order => $destIndex) {
+            $destination = $destinations[$destIndex - 1]; // -1 because route indices start from 1
+            $distance = $distanceMatrix[$currentIndex][$destIndex];
             
-            $result['days'][] = $dayPlan;
-            $result['total_distance'] += $dayPlan['total_distance'];
-            $result['total_duration'] += $dayPlan['total_duration'];
-        }
+            // Get duration from cache or calculate
+            $duration = $this->getDuration($currentIndex == 0 ? $startPoint : $destinations[$currentIndex - 1], $destination);
 
-        $actualDays = count($result['days']);
-
-        $dpSteps[] = [
-            'step' => 'FINAL_RESULT',
-            'description' => 'Hasil akhir dari Dynamic Programming',
-            'data' => [
-                'algorithm' => 'Bitmask Dynamic Programming (TSP)',
-                'max_days_requested' => $maxDays,
-                'actual_days_used' => $actualDays,
-                'efficiency_note' => $actualDays < $maxDays ? "Lebih efisien: hanya butuh {$actualDays} hari dari {$maxDays} hari yang diminta" : "Menggunakan semua hari yang tersedia",
-                'total_locations_visited' => count($path),
-                'total_distance_km' => number_format($result['total_distance'] / 1000, 2),
-                'total_duration_hours' => number_format($result['total_duration'] / 3600, 2),
-                'optimal_path' => array_map(fn($i) => $locations[$i]['name'], $path),
-            ],
-        ];
-
-        return $result;
-    }
-
-    /**
-     * Convert time string to minutes
-     */
-    private function timeToMinutes($time)
-    {
-        list($hours, $minutes) = explode(':', $time);
-        return ($hours * 60) + $minutes;
-    }
-
-    /**
-     * Check if tourism is open at given time
-     * @param array $location Tourism location with hours relationship
-     * @param int $dayOfWeek Day of week (0=Sunday, 1=Monday, etc)
-     * @param string $time Time in H:i format
-     * @return array ['is_open' => bool, 'reason' => string|null]
-     */
-    private function isTourismOpen($location, $dayOfWeek, $time)
-    {
-        // If no hours data, assume always open
-        if (!isset($location['hours']) || empty($location['hours'])) {
-            return ['is_open' => true, 'reason' => null];
-        }
-
-        // Find hours for the specific day
-        $hoursForDay = null;
-        foreach ($location['hours'] as $hour) {
-            if ($hour['day'] == $dayOfWeek) {
-                $hoursForDay = $hour;
-                break;
-            }
-        }
-
-        // If no hours for this day, assume closed
-        if (!$hoursForDay) {
-            $dayName = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][$dayOfWeek];
-            return [
-                'is_open' => false, 
-                'reason' => "Tutup pada hari {$dayName}"
+            $route[] = [
+                'order' => $order + 1,
+                'destination' => $destination,
+                'distance_from_previous' => $distance,
+                'duration_from_previous' => $duration,
             ];
-        }
 
-        // Parse times (handle both datetime and time string formats)
-        $openTime = $hoursForDay['open_time'];
-        $closeTime = $hoursForDay['close_time'];
-        
-        // Extract time if datetime format
-        if (strlen($openTime) > 5) {
-            $openTime = substr($openTime, 11, 5);
-        }
-        if (strlen($closeTime) > 5) {
-            $closeTime = substr($closeTime, 11, 5);
-        }
-
-        $timeMinutes = $this->timeToMinutes($time);
-        $openMinutes = $this->timeToMinutes($openTime);
-        $closeMinutes = $this->timeToMinutes($closeTime);
-
-        // Check if time is within opening hours
-        if ($timeMinutes >= $openMinutes && $timeMinutes <= $closeMinutes) {
-            return ['is_open' => true, 'reason' => null];
+            $totalDistance += $distance;
+            $totalDuration += $duration;
+            $currentIndex = $destIndex;
         }
 
         return [
-            'is_open' => false,
-            'reason' => "Jam operasional: {$openTime}-{$closeTime}"
+            'route' => $route,
+            'total_distance' => $totalDistance,
+            'total_duration' => $totalDuration,
         ];
     }
 
     /**
-     * Show the generated itinerary result
+     * Get duration between two points
+     */
+    private function getDuration($fromPoint, $toPoint)
+    {
+        // Try to get from cache first using coordinates
+        $cache = DistanceCache::where(function($query) use ($fromPoint, $toPoint) {
+            $query->where('from_lat', $fromPoint['lat'])
+                  ->where('from_long', $fromPoint['long'])
+                  ->where('to_lat', $toPoint['lat'])
+                  ->where('to_long', $toPoint['long']);
+        })->orWhere(function($query) use ($fromPoint, $toPoint) {
+            $query->where('from_lat', $toPoint['lat'])
+                  ->where('from_long', $toPoint['long'])
+                  ->where('to_lat', $fromPoint['lat'])
+                  ->where('to_long', $fromPoint['long']);
+        })->first();
+
+        if ($cache) {
+            return $cache->duration;
+        }
+
+        // Calculate if not in cache
+        $result = $this->calculateDistance(
+            $fromPoint['lat'],
+            $fromPoint['long'],
+            $toPoint['lat'],
+            $toPoint['long']
+        );
+
+        return $result['duration'];
+    }
+
+    /**
+     * Get route geometry from OpenRouteService for map visualization
+     */
+    private function getRouteGeometry($startPoint, $destinations, $optimalRoute)
+    {
+        try {
+            // Build coordinates array in order: [longitude, latitude]
+            $coordinates = [];
+            
+            // Add start point
+            $coordinates[] = [(float)$startPoint['long'], (float)$startPoint['lat']];
+            
+            // Add destinations in optimal order
+            foreach ($optimalRoute as $destIndex) {
+                $destination = $destinations[$destIndex - 1];
+                $coordinates[] = [(float)$destination['long'], (float)$destination['lat']];
+            }
+
+            // Call OpenRouteService Directions API
+            $apiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjIyMTZlOWViNmQwYjQ1MTRhODE5NDJlNzM2MDFjNTI1IiwiaCI6Im11cm11cjY0In0=';
+            $url = "https://api.openrouteservice.org/v2/directions/driving-car";
+
+            $postData = json_encode([
+                'coordinates' => $coordinates
+            ]);
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json; charset=utf-8',
+                'Accept: application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+                'Authorization: ' . $apiKey
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200 && $response) {
+                $data = json_decode($response, true);
+                
+                // OpenRouteService API returns 'routes' array, not 'features'
+                if (isset($data['routes'][0]['geometry'])) {
+                    $geometryString = $data['routes'][0]['geometry'];
+                    
+                    // Decode the encoded polyline geometry
+                    $decodedCoordinates = $this->decodePolyline($geometryString);
+                    
+                    return [
+                        'type' => 'success',
+                        'geometry' => [
+                            'type' => 'LineString',
+                            'coordinates' => $decodedCoordinates
+                        ],
+                        'coordinates' => $coordinates,
+                        'summary' => $data['routes'][0]['summary'] ?? null,
+                    ];
+                }
+            }
+
+            Log::warning('Failed to get route geometry from OpenRouteService. HTTP Code: ' . $httpCode);
+            if ($response) {
+                Log::warning('API Response: ' . substr($response, 0, 500));
+            }
+            
+            // Fallback: return straight lines
+            return [
+                'type' => 'fallback',
+                'coordinates' => $coordinates,
+                'geometry' => null
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Error getting route geometry: ' . $e->getMessage());
+            
+            // Fallback
+            $coordinates = [[$startPoint['long'], $startPoint['lat']]];
+            foreach ($optimalRoute as $destIndex) {
+                $destination = $destinations[$destIndex - 1];
+                $coordinates[] = [$destination['long'], $destination['lat']];
+            }
+            
+            return [
+                'type' => 'fallback',
+                'coordinates' => $coordinates,
+                'geometry' => null
+            ];
+        }
+    }
+
+    /**
+     * Decode polyline geometry string to array of [lng, lat] coordinates
+     * Based on Google's Encoded Polyline Algorithm Format
+     */
+    private function decodePolyline($encoded)
+    {
+        $length = strlen($encoded);
+        $index = 0;
+        $points = [];
+        $lat = 0;
+        $lng = 0;
+
+        while ($index < $length) {
+            // Decode latitude
+            $result = 0;
+            $shift = 0;
+            do {
+                $b = ord($encoded[$index++]) - 63;
+                $result |= ($b & 0x1f) << $shift;
+                $shift += 5;
+            } while ($b >= 0x20);
+            $dlat = (($result & 1) ? ~($result >> 1) : ($result >> 1));
+            $lat += $dlat;
+
+            // Decode longitude
+            $result = 0;
+            $shift = 0;
+            do {
+                $b = ord($encoded[$index++]) - 63;
+                $result |= ($b & 0x1f) << $shift;
+                $shift += 5;
+            } while ($b >= 0x20);
+            $dlng = (($result & 1) ? ~($result >> 1) : ($result >> 1));
+            $lng += $dlng;
+
+            // Add point as [longitude, latitude] for GeoJSON format
+            $points[] = [$lng / 1e5, $lat / 1e5];
+        }
+
+        return $points;
+    }
+
+    /**
+     * Show itinerary result
      */
     public function result()
     {
-        if (!session()->has('itinerary_result')) {
-            return redirect()->route('itinerary.create')
-                ->with('error', 'Tidak ada data itinerary. Silakan buat itinerary terlebih dahulu.');
+        if (!session()->has('itinerary_data')) {
+            return redirect()->route('itinerary.create')->with('error', 'Data itinerary tidak ditemukan!');
         }
 
-        $data = session('itinerary_result');
+        $itineraryData = session('itinerary_data');
         
-        return view('itinerary.result', [
-            'route' => $data['route'],
-            'dpSteps' => $data['dp_steps'],
-            'distanceMatrix' => $data['distance_matrix'],
-            'startLocation' => $data['start_location'],
-            'endLocation' => $data['end_location'],
-            'settings' => $data['settings'],
-            'alerts' => $data['alerts'] ?? [],
+        // Log route geometry for debugging
+        Log::info('Route Geometry Data:', [
+            'has_geometry' => isset($itineraryData['route_geometry']),
+            'geometry_type' => $itineraryData['route_geometry']['type'] ?? 'unknown',
+            'has_coordinates' => isset($itineraryData['route_geometry']['coordinates']),
+            'coordinates_count' => isset($itineraryData['route_geometry']['coordinates']) ? count($itineraryData['route_geometry']['coordinates']) : 0,
+            'has_geometry_obj' => isset($itineraryData['route_geometry']['geometry']),
+            'geometry_coords_count' => isset($itineraryData['route_geometry']['geometry']['coordinates']) ? count($itineraryData['route_geometry']['geometry']['coordinates']) : 0,
         ]);
+        
+        return view('itinerary.result', compact('itineraryData'));
     }
 }

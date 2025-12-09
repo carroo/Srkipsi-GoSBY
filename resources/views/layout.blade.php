@@ -11,6 +11,7 @@
         integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    @stack('styles')
 </head>
 
 <body class="bg-gray-50 text-gray-900 antialiased">
@@ -316,7 +317,6 @@
         </div>
     </footer>
     <script>
-        // Notification function using SweetAlert2 Toast
         function showNotification(message, type = 'success') {
             const Toast = Swal.mixin({
                 toast: true,
@@ -335,6 +335,21 @@
                 title: message
             });
         }
+
+        // Confirmation function using SweetAlert2
+        function showConfirmation(title, text, confirmButtonText = 'Ya', cancelButtonText = 'Batal') {
+            return Swal.fire({
+                title: title,
+                text: text,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: confirmButtonText,
+                cancelButtonText: cancelButtonText,
+                reverseButtons: true
+            });
+        }
     </script>
 
     @yield('scripts')
@@ -342,3 +357,4 @@
 </body>
 
 </html>
+

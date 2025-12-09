@@ -15,11 +15,19 @@ class DistanceCache extends Model
     protected $fillable = [
         'from_id',
         'to_id',
+        'from_lat',
+        'from_long',
+        'to_lat',
+        'to_long',
         'distance',
         'duration',
     ];
 
     protected $casts = [
+        'from_lat' => 'decimal:8',
+        'from_long' => 'decimal:8',
+        'to_lat' => 'decimal:8',
+        'to_long' => 'decimal:8',
         'distance' => 'integer',
         'duration' => 'integer',
     ];

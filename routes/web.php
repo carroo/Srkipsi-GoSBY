@@ -37,7 +37,8 @@ Route::middleware('auth:web')->group(function () {
 
     // Itinerary Routes
     Route::get('/itinerary/create', [ItineraryController::class, 'create'])->name('itinerary.create');
-    Route::post('/itinerary/store', [ItineraryController::class, 'store'])->name('itinerary.store');
+    Route::post('/itinerary/generate', [ItineraryController::class, 'generate'])->name('itinerary.generate');
+    // Route::post('/itinerary/store', [ItineraryController::class, 'store'])->name('itinerary.store');
     Route::get('/itinerary/result', [ItineraryController::class, 'result'])->name('itinerary.result');
 });
 
