@@ -11,7 +11,7 @@
         integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    @stack('styles')
+    @yield('styles')
 </head>
 
 <body class="bg-gray-50 text-gray-900 antialiased">

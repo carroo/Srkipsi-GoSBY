@@ -43,7 +43,7 @@ class TripCartController extends Controller
             // Create distance cache for each pair (both directions)
             foreach ($otherTourisms as $otherCart) {
                 $otherTourism = $otherCart->tourism;
-                
+
                 // Check if distance cache from current to other exists
                 $cacheCurrentToOther = DistanceCache::where('from_id', $currentTourism->id)
                     ->where('to_id', $otherTourism->id)
@@ -66,13 +66,13 @@ class TripCartController extends Controller
             }
 
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'message' => 'Destinasi berhasil ditambahkan ke trip cart!',
                 'data' => $tripCart
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Gagal menambahkan destinasi: ' . $e->getMessage()
             ], 500);
         }
@@ -91,7 +91,7 @@ class TripCartController extends Controller
                 $toTourism->latitude,
                 $toTourism->longitude
             );
-            
+
             $distanceMeters = $result['distance']; // already in meters
             $durationSeconds = $result['duration']; // already in seconds
 
@@ -143,54 +143,59 @@ class TripCartController extends Controller
 
         return view('trip-cart.index', compact('tripCart'));
     }
-    
+
     private function calculateDistance($lat1, $lon1, $lat2, $lon2)
     {
         try {
-            $apiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjIyMTZlOWViNmQwYjQ1MTRhODE5NDJlNzM2MDFjNTI1IiwiaCI6Im11cm11cjY0In0';
-            
-            // OpenRouteService API endpoint
-            $url = "https://api.openrouteservice.org/v2/directions/driving-car";
-            $url .= "?api_key={$apiKey}";
-            $url .= "&start={$lon1},{$lat1}";  // Note: OpenRouteService uses lon,lat format
-            $url .= "&end={$lon2},{$lat2}";
-            
-            // Make HTTP request
+            $apiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjIyMTZlOWViNmQwYjQ1MTRhODE5NDJlNzM2MDFjNTI1IiwiaCI6Im11cm11cjY0In0=';
+
+            $url = "https://api.openrouteservice.org/v2/directions/cycling-regular";
+
+            $body = [
+                "coordinates" => [
+                    [(float)$lon1, (float)$lat1],
+                    [(float)$lon2, (float)$lat2]
+                ]
+            ];
+
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Accept: application/json'
+                'Authorization: ' . $apiKey,
+                'Content-Type: application/json; charset=utf-8',
+                'Accept: application/geo+json, application/json'
             ]);
-            
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            
+
+
             if ($httpCode === 200 && $response) {
                 $data = json_decode($response, true);
-                
+
                 // Extract distance and duration from response
-                if (isset($data['features'][0]['properties']['segments'][0])) {
-                    $segment = $data['features'][0]['properties']['segments'][0];
-                    $distanceMeters = $segment['distance']; // in meters
-                    $durationSeconds = $segment['duration']; // in seconds
-                    
+                if (isset($data['routes'][0]['summary'])) {
+                    $distanceMeters = $data['routes'][0]['summary']['distance']; // in meters
+                    $durationSeconds = $data['routes'][0]['summary']['duration']; // in seconds
+
                     return [
                         'distance' => $distanceMeters,
-                        'duration' => $durationSeconds
+                        'duration' => $durationSeconds,
                     ];
                 }
             }
-            
+
             // Fallback to Haversine formula if API fails
             $distanceKm = $this->calculateDistanceHaversine($lat1, $lon1, $lat2, $lon2);
             return [
                 'distance' => $distanceKm * 1000, // convert to meters
                 'duration' => ($distanceKm) * (3600 / 40) // estimate duration
             ];
-            
         } catch (\Exception $e) {
             // Fallback to Haversine formula on error
             $distanceKm = $this->calculateDistanceHaversine($lat1, $lon1, $lat2, $lon2);
@@ -215,9 +220,9 @@ class TripCartController extends Controller
         $deltaLon = deg2rad($lon2 - $lon1);
 
         $a = sin($deltaLat / 2) * sin($deltaLat / 2) +
-             cos($lat1Rad) * cos($lat2Rad) *
-             sin($deltaLon / 2) * sin($deltaLon / 2);
-        
+            cos($lat1Rad) * cos($lat2Rad) *
+            sin($deltaLon / 2) * sin($deltaLon / 2);
+
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
 
         return round($earthRadius * $c, 2); // Distance in kilometers

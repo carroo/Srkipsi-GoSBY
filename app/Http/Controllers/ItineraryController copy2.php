@@ -137,7 +137,6 @@ class ItineraryController extends Controller
 
     /**
      * Build distance matrix between all points
-     * Optimized with batch cache lookup and batch insert
      */
     private function buildDistanceMatrix($startPoint, $destinations)
     {
@@ -145,164 +144,29 @@ class ItineraryController extends Controller
         $n = count($points);
         $matrix = array_fill(0, $n, array_fill(0, $n, 0));
 
-        // Step 1: Collect all coordinate pairs that need to be checked
-        $pairs = [];
         for ($i = 0; $i < $n; $i++) {
             for ($j = 0; $j < $n; $j++) {
                 if ($i == $j) {
+                    $matrix[$i][$j] = 0;
                     continue;
                 }
-                $pairs[] = [
-                    'i' => $i,
-                    'j' => $j,
-                    'from' => $points[$i],
-                    'to' => $points[$j],
-                ];
+
+                $fromPoint = $points[$i];
+                $toPoint = $points[$j];
+
+                // Check if distance exists in cache
+                $distance = $this->getDistanceFromCache($fromPoint, $toPoint);
+
+                if ($distance === null) {
+                    // Calculate and cache the distance
+                    $distance = $this->calculateAndCacheDistance($fromPoint, $toPoint);
+                }
+
+                $matrix[$i][$j] = $distance;
             }
-        }
-
-        // Step 2: Batch lookup from cache
-        $cacheMap = $this->batchGetDistanceFromCache($pairs);
-
-        // Step 3: Identify missing pairs and calculate them
-        $missingPairs = [];
-        foreach ($pairs as $pair) {
-            $key = $this->makeCacheKey($pair['from'], $pair['to']);
-            if (!isset($cacheMap[$key])) {
-                $missingPairs[] = $pair;
-            }
-        }
-
-        // Step 4: Calculate missing distances (if any)
-        if (count($missingPairs) > 0) {
-            Log::info('Calculating ' . count($missingPairs) . ' missing distances...');
-            $newDistances = $this->batchCalculateAndCacheDistances($missingPairs);
-            // Merge new distances into cache map
-            $cacheMap = array_merge($cacheMap, $newDistances);
-        }
-
-        // Step 5: Fill the matrix
-        foreach ($pairs as $pair) {
-            $key = $this->makeCacheKey($pair['from'], $pair['to']);
-            $matrix[$pair['i']][$pair['j']] = $cacheMap[$key] ?? 0;
         }
 
         return $matrix;
-    }
-
-    /**
-     * Create a unique key for cache lookup
-     */
-    private function makeCacheKey($fromPoint, $toPoint)
-    {
-        return sprintf(
-            '%.6f,%.6f->%.6f,%.6f',
-            $fromPoint['lat'],
-            $fromPoint['long'],
-            $toPoint['lat'],
-            $toPoint['long']
-        );
-    }
-
-    /**
-     * Batch get distances from cache (single query)
-     */
-    private function batchGetDistanceFromCache($pairs)
-    {
-        if (empty($pairs)) {
-            return [];
-        }
-
-        // Build a single query with multiple OR conditions
-        $query = DistanceCache::query();
-        
-        foreach ($pairs as $index => $pair) {
-            $query->orWhere(function($q) use ($pair) {
-                $q->where('from_lat', $pair['from']['lat'])
-                  ->where('from_long', $pair['from']['long'])
-                  ->where('to_lat', $pair['to']['lat'])
-                  ->where('to_long', $pair['to']['long']);
-            });
-        }
-
-        $cached = $query->get();
-
-        // Map results by coordinate key
-        $cacheMap = [];
-        foreach ($cached as $cache) {
-            $key = sprintf(
-                '%.6f,%.6f->%.6f,%.6f',
-                $cache->from_lat,
-                $cache->from_long,
-                $cache->to_lat,
-                $cache->to_long
-            );
-            $cacheMap[$key] = $cache->distance;
-        }
-
-        return $cacheMap;
-    }
-
-    /**
-     * Calculate and cache distances for missing pairs
-     */
-    private function batchCalculateAndCacheDistances($pairs)
-    {
-        $results = [];
-
-        foreach ($pairs as $index => $pair) {
-            try {
-                $result = $this->calculateDistance(
-                    $pair['from']['lat'],
-                    $pair['from']['long'],
-                    $pair['to']['lat'],
-                    $pair['to']['long']
-                );
-
-                $distance = (int) $result['distance'];
-                $duration = (int) $result['duration'];
-
-                $key = $this->makeCacheKey($pair['from'], $pair['to']);
-                $results[$key] = $distance;
-
-                // Insert to cache immediately (individual insert for better duplicate handling)
-                try {
-                    DistanceCache::create([
-                        'from_id' => isset($pair['from']['id']) && $pair['from']['id'] > 0 ? $pair['from']['id'] : null,
-                        'to_id' => isset($pair['to']['id']) && $pair['to']['id'] > 0 ? $pair['to']['id'] : null,
-                        'from_lat' => $pair['from']['lat'],
-                        'from_long' => $pair['from']['long'],
-                        'to_lat' => $pair['to']['lat'],
-                        'to_long' => $pair['to']['long'],
-                        'distance' => $distance,
-                        'duration' => $duration,
-                    ]);
-                } catch (\Exception $cacheError) {
-                    // Ignore duplicate cache entries
-                    Log::debug('Cache entry already exists, skipping');
-                }
-
-                // Add small delay every 5 requests to avoid rate limiting
-                if (($index + 1) % 5 == 0) {
-                    usleep(200000); // 0.2 seconds
-                }
-
-            } catch (\Exception $e) {
-                Log::error('Failed to calculate distance: ' . $e->getMessage());
-                // Fallback: use straight line distance
-                $distance = (int) ($this->calculateDistanceHaversine(
-                    $pair['from']['lat'],
-                    $pair['from']['long'],
-                    $pair['to']['lat'],
-                    $pair['to']['long']
-                ) * 1000);
-                
-                $key = $this->makeCacheKey($pair['from'], $pair['to']);
-                $results[$key] = $distance;
-            }
-        }
-
-        return $results;
     }
 
     /**
@@ -311,12 +175,18 @@ class ItineraryController extends Controller
     private function getDistanceFromCache($fromPoint, $toPoint)
     {
         // Check cache using coordinates (works for both tourism and custom locations)
-        // Only check exact direction (from -> to), NOT reverse direction
-        $cache = DistanceCache::where('from_lat', $fromPoint['lat'])
-                              ->where('from_long', $fromPoint['long'])
-                              ->where('to_lat', $toPoint['lat'])
-                              ->where('to_long', $toPoint['long'])
-                              ->first();
+        $cache = DistanceCache::where(function($query) use ($fromPoint, $toPoint) {
+            $query->where('from_lat', $fromPoint['lat'])
+                  ->where('from_long', $fromPoint['long'])
+                  ->where('to_lat', $toPoint['lat'])
+                  ->where('to_long', $toPoint['long']);
+        })->orWhere(function($query) use ($fromPoint, $toPoint) {
+            // Check reverse direction (sometimes same route can have different values)
+            $query->where('from_lat', $toPoint['lat'])
+                  ->where('from_long', $toPoint['long'])
+                  ->where('to_lat', $fromPoint['lat'])
+                  ->where('to_long', $fromPoint['long']);
+        })->first();
 
         return $cache ? $cache->distance : null;
     }
@@ -375,7 +245,7 @@ class ItineraryController extends Controller
         try {
             $apiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjIyMTZlOWViNmQwYjQ1MTRhODE5NDJlNzM2MDFjNTI1IiwiaCI6Im11cm11cjY0In0=';
             
-            $url = "https://api.openrouteservice.org/v2/directions/cycling-regular";
+            $url = "https://api.openrouteservice.org/v2/directions/driving-car";
             $url .= "?api_key={$apiKey}";
             $url .= "&start={$lon1},{$lat1}";
             $url .= "&end={$lon2},{$lat2}";
@@ -566,12 +436,17 @@ class ItineraryController extends Controller
     private function getDuration($fromPoint, $toPoint)
     {
         // Try to get from cache first using coordinates
-        // Only check exact direction (from -> to), NOT reverse direction
-        $cache = DistanceCache::where('from_lat', $fromPoint['lat'])
-                              ->where('from_long', $fromPoint['long'])
-                              ->where('to_lat', $toPoint['lat'])
-                              ->where('to_long', $toPoint['long'])
-                              ->first();
+        $cache = DistanceCache::where(function($query) use ($fromPoint, $toPoint) {
+            $query->where('from_lat', $fromPoint['lat'])
+                  ->where('from_long', $fromPoint['long'])
+                  ->where('to_lat', $toPoint['lat'])
+                  ->where('to_long', $toPoint['long']);
+        })->orWhere(function($query) use ($fromPoint, $toPoint) {
+            $query->where('from_lat', $toPoint['lat'])
+                  ->where('from_long', $toPoint['long'])
+                  ->where('to_lat', $fromPoint['lat'])
+                  ->where('to_long', $fromPoint['long']);
+        })->first();
 
         if ($cache) {
             return $cache->duration;
@@ -605,10 +480,11 @@ class ItineraryController extends Controller
                 $destination = $destinations[$destIndex - 1];
                 $coordinates[] = [(float)$destination['long'], (float)$destination['lat']];
             }
+            dd($coordinates);
 
             // Call OpenRouteService Directions API
             $apiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjIyMTZlOWViNmQwYjQ1MTRhODE5NDJlNzM2MDFjNTI1IiwiaCI6Im11cm11cjY0In0=';
-            $url = "https://api.openrouteservice.org/v2/directions/cycling-regular";
+            $url = "https://api.openrouteservice.org/v2/directions/driving-car";
 
             $postData = json_encode([
                 'coordinates' => $coordinates
@@ -637,10 +513,15 @@ class ItineraryController extends Controller
                 if (isset($data['routes'][0]['geometry'])) {
                     $geometryString = $data['routes'][0]['geometry'];
                     
-                    // Return encoded polyline to be decoded in JS
+                    // Decode the encoded polyline geometry
+                    $decodedCoordinates = $this->decodePolyline($geometryString);
+                    
                     return [
                         'type' => 'success',
-                        'geometry' => $geometryString, // Encoded polyline string
+                        'geometry' => [
+                            'type' => 'LineString',
+                            'coordinates' => $decodedCoordinates
+                        ],
                         'coordinates' => $coordinates,
                         'summary' => isset($data['routes'][0]['summary']) ? $data['routes'][0]['summary'] : null,
                     ];
@@ -678,6 +559,48 @@ class ItineraryController extends Controller
     }
 
     /**
+     * Decode polyline geometry string to array of [lng, lat] coordinates
+     * Based on Google's Encoded Polyline Algorithm Format
+     */
+    private function decodePolyline($encoded)
+    {
+        $length = strlen($encoded);
+        $index = 0;
+        $points = [];
+        $lat = 0;
+        $lng = 0;
+
+        while ($index < $length) {
+            // Decode latitude
+            $result = 0;
+            $shift = 0;
+            do {
+                $b = ord($encoded[$index++]) - 63;
+                $result |= ($b & 0x1f) << $shift;
+                $shift += 5;
+            } while ($b >= 0x20);
+            $dlat = (($result & 1) ? ~($result >> 1) : ($result >> 1));
+            $lat += $dlat;
+
+            // Decode longitude
+            $result = 0;
+            $shift = 0;
+            do {
+                $b = ord($encoded[$index++]) - 63;
+                $result |= ($b & 0x1f) << $shift;
+                $shift += 5;
+            } while ($b >= 0x20);
+            $dlng = (($result & 1) ? ~($result >> 1) : ($result >> 1));
+            $lng += $dlng;
+
+            // Add point as [longitude, latitude] for GeoJSON format
+            $points[] = [$lng / 1e5, $lat / 1e5];
+        }
+
+        return $points;
+    }
+
+    /**
      * Show itinerary result
      */
     public function result()
@@ -687,6 +610,17 @@ class ItineraryController extends Controller
         }
 
         $itineraryData = session('itinerary_data');
+        dd($itineraryData);
+        
+        // Log route geometry for debugging
+        Log::info('Route Geometry Data:', [
+            'has_geometry' => isset($itineraryData['route_geometry']),
+            'geometry_type' => isset($itineraryData['route_geometry']['type']) ? $itineraryData['route_geometry']['type'] : 'unknown',
+            'has_coordinates' => isset($itineraryData['route_geometry']['coordinates']),
+            'coordinates_count' => isset($itineraryData['route_geometry']['coordinates']) ? count($itineraryData['route_geometry']['coordinates']) : 0,
+            'has_geometry_obj' => isset($itineraryData['route_geometry']['geometry']),
+            'geometry_coords_count' => isset($itineraryData['route_geometry']['geometry']['coordinates']) ? count($itineraryData['route_geometry']['geometry']['coordinates']) : 0,
+        ]);
         
         return view('itinerary.result', compact('itineraryData'));
     }
