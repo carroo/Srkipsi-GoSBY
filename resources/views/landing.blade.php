@@ -124,7 +124,7 @@
                 </div>
 
                 <div class="flex flex-col sm:flex-row gap-4 animate-fade-in-up" style="animation-delay: 0.4s;">
-                    <a href="#cta-start" class="inline-block bg-linear-to-r from-blue-600 to-indigo-600 hover:shadow-lg hover:shadow-blue-500/50 text-white font-bold py-3 px-8 rounded-lg transition duration-300 transform hover:scale-105">
+                    <a href="{{ route('tourism.index') }}" class="inline-block bg-linear-to-r from-blue-600 to-indigo-600 hover:shadow-lg hover:shadow-blue-500/50 text-white font-bold py-3 px-8 rounded-lg transition duration-300 transform hover:scale-105">
                         Mulai Sekarang
                     </a>
                     <a href="#how-it-works" class="inline-block bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold py-3 px-8 rounded-lg transition duration-300 transform hover:scale-105 border border-gray-200">
@@ -137,19 +137,19 @@
             <div class="relative h-96 animate-slide-in-right" style="animation-delay: 0.2s;">
                 <!-- Image 1 - Center (largest) -->
                 <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-86 h-64 rounded-2xl overflow-hidden shadow-2xl hover:shadow-3xl transition duration-300 transform hover:scale-105 z-30">
-                    <img src="https://picsum.photos/400/350?random=10" alt="Travel Planning" class="w-full h-full object-cover">
+                    <img src="{{ asset('img/1.png') }}" alt="Travel Planning" class="w-full h-full object-cover">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
                 </div>
 
                 <!-- Image 2 - Top Left -->
                 <div class="absolute top-0 left-0 w-56 h-48 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition duration-300 transform hover:scale-105 z-20 border-4 border-white">
-                    <img src="https://picsum.photos/350/300?random=11" alt="Destinasi 1" class="w-full h-full object-cover">
+                    <img src="{{ asset('img/2.png') }}" alt="Destinasi 1" class="w-full h-full object-cover">
                     <div class="absolute inset-0 bg-gradient-to-t from-blue-600/40 to-transparent"></div>
                 </div>
 
                 <!-- Image 3 - Bottom Right -->
                 <div class="absolute bottom-0 right-0 w-56 h-48 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition duration-300 transform hover:scale-105 z-20 border-4 border-white">
-                    <img src="https://picsum.photos/350/300?random=12" alt="Destinasi 2" class="w-full h-full object-cover">
+                    <img src="{{ asset('img/3.png') }}" alt="Destinasi 2" class="w-full h-full object-cover">
                     <div class="absolute inset-0 bg-gradient-to-t from-indigo-600/40 to-transparent"></div>
                 </div>
 
@@ -183,7 +183,7 @@
                 </p>
             </div>
             <div class="relative animate-slide-in-right">
-                <img src="https://picsum.photos/500/400?random=1" alt="Teknologi Rekomendasi" class="rounded-lg shadow-xl hover:shadow-2xl transition duration-300 transform hover:scale-105">
+                <img src="{{ asset('img/4.png') }}" alt="Teknologi Rekomendasi" class="rounded-lg shadow-xl hover:shadow-2xl transition duration-300 transform hover:scale-105">
                 <div class="absolute -bottom-4 -right-4 w-32 h-32 bg-linear-to-br from-blue-400 to-indigo-600 rounded-lg shadow-lg opacity-50"></div>
             </div>
         </div>
@@ -589,7 +589,7 @@
                         {{ Str::limit($tourism->description, 150) }}
                     </p>
                     <div class="flex justify-between items-center">
-                        <span class="text-yellow-500 font-semibold">⭐ {{ number_format($tourism->rating, 1) }}/5</span>
+                        <span class="text-yellow-500 font-semibold">⭐ {{ number_format($tourism->rating, 1) }} ({{ $tourism->popularity }} 🧑)</span>
                         @if($tourism->prices->isNotEmpty())
                             @php
                                 $minPrice = $tourism->prices->min('price');
@@ -602,7 +602,7 @@
                                 @endif
                             </span>
                         @else
-                            <span class="text-gray-500 text-sm">-</span>
+                            <span class="text-gray-500 text-sm">gratis</span>
                         @endif
                     </div>
                 </div>
@@ -633,39 +633,10 @@
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up" style="animation-delay: 0.4s;">
             <a href="{{ route('tourism.index') }}" class="inline-block bg-white text-blue-600 font-bold py-4 px-10 rounded-lg hover:bg-gray-100 hover:shadow-xl transition duration-300 transform hover:scale-105 text-lg">
-                Buat Itinerary Sekarang
-            </a>
-            <a href="#how-it-works" class="inline-block bg-blue-700 hover:bg-blue-800 text-white font-bold py-4 px-10 rounded-lg transition duration-300 text-lg border-2 border-white hover:shadow-xl transform hover:scale-105">
-                Pelajari Lebih Lanjut
+                Cari Destinasi Sekarang
             </a>
         </div>
-        <p class="text-sm opacity-75 mt-8">
-            Gratis untuk mencoba • Tidak perlu kartu kredit • Dapatkan itinerary dalam 5 menit
-        </p>
     </div>
 </section>
 
-<!-- Stats Section (Optional) -->
-<section class="py-16 bg-white">
-    <div class="max-w-6xl mx-auto px-4">
-        <div class="grid md:grid-cols-4 gap-8 text-center">
-            <div class="p-6 rounded-lg bg-linear-to-br from-blue-50 to-indigo-50 hover:shadow-lg transition duration-300 animate-fade-in-up transform hover:-translate-y-2">
-                <div class="text-4xl font-bold bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2 animate-pulse">{{ $stats['total_destinations'] }}+</div>
-                <p class="text-gray-600 font-semibold">Destinasi Wisata</p>
-            </div>
-            <div class="p-6 rounded-lg bg-linear-to-br from-green-50 to-teal-50 hover:shadow-lg transition duration-300 animate-fade-in-up transform hover:-translate-y-2" style="animation-delay: 0.1s;">
-                <div class="text-4xl font-bold bg-linear-to-r from-green-600 to-teal-600 bg-clip-text text-transparent mb-2 animate-pulse" style="animation-delay: 0.1s;">10K+</div>
-                <p class="text-gray-600 font-semibold">Pengguna Aktif</p>
-            </div>
-            <div class="p-6 rounded-lg bg-linear-to-br from-purple-50 to-pink-50 hover:shadow-lg transition duration-300 animate-fade-in-up transform hover:-translate-y-2" style="animation-delay: 0.2s;">
-                <div class="text-4xl font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2 animate-pulse" style="animation-delay: 0.2s;">50K+</div>
-                <p class="text-gray-600 font-semibold">Itinerary Dibuat</p>
-            </div>
-            <div class="p-6 rounded-lg bg-linear-to-br from-orange-50 to-red-50 hover:shadow-lg transition duration-300 animate-fade-in-up transform hover:-translate-y-2" style="animation-delay: 0.3s;">
-                <div class="text-4xl font-bold bg-linear-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2 animate-pulse" style="animation-delay: 0.3s;">4.8★</div>
-                <p class="text-gray-600 font-semibold">Rating Rata-rata</p>
-            </div>
-        </div>
-    </div>
-</section>
 @endsection

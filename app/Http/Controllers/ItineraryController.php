@@ -34,7 +34,7 @@ class ItineraryController extends Controller
         // Increase execution time for complex TSP calculations
         set_time_limit(300); // 5 minutes
         ini_set('max_execution_time', 300);
-        
+
         if (!Auth::check()) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
@@ -84,10 +84,10 @@ class ItineraryController extends Controller
             if ($startPoint['type'] === 'tourism' && $item->tourism_id == $startPoint['id']) {
                 continue; // Skip starting point
             }
-            
+
             // Load tourism hours relationship
             $item->tourism->load('hours');
-            
+
             $destinations[] = [
                 'id' => $item->tourism_id,
                 'name' => $item->tourism->name,
@@ -215,13 +215,13 @@ class ItineraryController extends Controller
 
         // Build a single query with multiple OR conditions
         $query = DistanceCache::query();
-        
+
         foreach ($pairs as $index => $pair) {
-            $query->orWhere(function($q) use ($pair) {
+            $query->orWhere(function ($q) use ($pair) {
                 $q->where('from_lat', $pair['from']['lat'])
-                  ->where('from_long', $pair['from']['long'])
-                  ->where('to_lat', $pair['to']['lat'])
-                  ->where('to_long', $pair['to']['long']);
+                    ->where('from_long', $pair['from']['long'])
+                    ->where('to_lat', $pair['to']['lat'])
+                    ->where('to_long', $pair['to']['long']);
             });
         }
 
@@ -286,7 +286,6 @@ class ItineraryController extends Controller
                 if (($index + 1) % 5 == 0) {
                     usleep(200000); // 0.2 seconds
                 }
-
             } catch (\Exception $e) {
                 Log::error('Failed to calculate distance: ' . $e->getMessage());
                 // Fallback: use straight line distance
@@ -296,7 +295,7 @@ class ItineraryController extends Controller
                     $pair['to']['lat'],
                     $pair['to']['long']
                 ) * 1000);
-                
+
                 $key = $this->makeCacheKey($pair['from'], $pair['to']);
                 $results[$key] = $distance;
             }
@@ -306,111 +305,61 @@ class ItineraryController extends Controller
     }
 
     /**
-     * Get distance from cache
-     */
-    private function getDistanceFromCache($fromPoint, $toPoint)
-    {
-        // Check cache using coordinates (works for both tourism and custom locations)
-        // Only check exact direction (from -> to), NOT reverse direction
-        $cache = DistanceCache::where('from_lat', $fromPoint['lat'])
-                              ->where('from_long', $fromPoint['long'])
-                              ->where('to_lat', $toPoint['lat'])
-                              ->where('to_long', $toPoint['long'])
-                              ->first();
-
-        return $cache ? $cache->distance : null;
-    }
-
-    /**
-     * Calculate distance using TripCartController method and cache it
-     */
-    private function calculateAndCacheDistance($fromPoint, $toPoint)
-    {
-        try {
-            $result = $this->calculateDistance(
-                $fromPoint['lat'],
-                $fromPoint['long'],
-                $toPoint['lat'],
-                $toPoint['long']
-            );
-
-            $distance = $result['distance']; // in meters
-            $duration = $result['duration']; // in seconds
-
-            // Always cache the distance regardless of type
-            try {
-                DistanceCache::create([
-                    'from_id' => isset($fromPoint['id']) && $fromPoint['id'] > 0 ? $fromPoint['id'] : null,
-                    'to_id' => isset($toPoint['id']) && $toPoint['id'] > 0 ? $toPoint['id'] : null,
-                    'from_lat' => $fromPoint['lat'],
-                    'from_long' => $fromPoint['long'],
-                    'to_lat' => $toPoint['lat'],
-                    'to_long' => $toPoint['long'],
-                    'distance' => (int) $distance,
-                    'duration' => (int) $duration,
-                ]);
-            } catch (\Exception $cacheError) {
-                // Ignore duplicate cache entries
-                Log::warning('Cache entry might already exist: ' . $cacheError->getMessage());
-            }
-
-            return (int) $distance;
-        } catch (\Exception $e) {
-            Log::error('Failed to calculate distance: ' . $e->getMessage());
-            // Fallback: return straight line distance
-            return (int) ($this->calculateDistanceHaversine(
-                $fromPoint['lat'],
-                $fromPoint['long'],
-                $toPoint['lat'],
-                $toPoint['long']
-            ) * 1000);
-        }
-    }
-
-    /**
      * Calculate distance using OpenRouteService API (same as TripCartController)
      */
     private function calculateDistance($lat1, $lon1, $lat2, $lon2)
     {
         try {
             $apiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjIyMTZlOWViNmQwYjQ1MTRhODE5NDJlNzM2MDFjNTI1IiwiaCI6Im11cm11cjY0In0=';
-            
+
             $url = "https://api.openrouteservice.org/v2/directions/cycling-regular";
-            $url .= "?api_key={$apiKey}";
-            $url .= "&start={$lon1},{$lat1}";
-            $url .= "&end={$lon2},{$lat2}";
-            
+            $body = [
+                "coordinates" => [
+                    [(float)$lon1, (float)$lat1],
+                    [(float)$lon2, (float)$lat2]
+                ]
+            ];
+
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 30); // Increased timeout to 30 seconds
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
-            
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: ' . $apiKey,
+                'Content-Type: application/json; charset=utf-8',
+                'Accept: application/geo+json, application/json'
+            ]);
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            
+
             if ($httpCode === 200 && $response) {
                 $data = json_decode($response, true);
-                
-                if (isset($data['features'][0]['properties']['segments'][0])) {
-                    $segment = $data['features'][0]['properties']['segments'][0];
+
+                if (isset($data['routes'][0]['summary'])) {
+                    $distanceMeters = $data['routes'][0]['summary']['distance']; // in meters
+                    $durationSeconds = $data['routes'][0]['summary']['duration']; // in seconds
+
                     return [
-                        'distance' => $segment['distance'],
-                        'duration' => $segment['duration']
+                        'distance' => $distanceMeters,
+                        'duration' => $durationSeconds,
                     ];
                 }
             }
-            
+
             // Fallback
             $distanceKm = $this->calculateDistanceHaversine($lat1, $lon1, $lat2, $lon2);
+            dd("s");
             return [
                 'distance' => $distanceKm * 1000,
                 'duration' => ($distanceKm) * (3600 / 40)
             ];
-            
         } catch (\Exception $e) {
             $distanceKm = $this->calculateDistanceHaversine($lat1, $lon1, $lat2, $lon2);
+            dd("x");
             return [
                 'distance' => $distanceKm * 1000,
                 'duration' => ($distanceKm) * (3600 / 40)
@@ -431,9 +380,9 @@ class ItineraryController extends Controller
         $deltaLon = deg2rad($lon2 - $lon1);
 
         $a = sin($deltaLat / 2) * sin($deltaLat / 2) +
-             cos($lat1Rad) * cos($lat2Rad) *
-             sin($deltaLon / 2) * sin($deltaLon / 2);
-        
+            cos($lat1Rad) * cos($lat2Rad) *
+            sin($deltaLon / 2) * sin($deltaLon / 2);
+
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
 
         return round($earthRadius * $c, 2);
@@ -446,14 +395,14 @@ class ItineraryController extends Controller
     {
         // n is number of destinations (excluding start point)
         // Start point is always index 0
-        
+
         if ($n == 0) return [];
         if ($n == 1) return [1]; // Only one destination
 
         // DP table: dp[mask][i] = minimum distance to visit cities in mask, ending at city i
         $dp = [];
         $parent = [];
-        
+
         // Initialize
         for ($mask = 0; $mask < (1 << $n); $mask++) {
             $dp[$mask] = array_fill(0, $n + 1, PHP_INT_MAX);
@@ -537,7 +486,7 @@ class ItineraryController extends Controller
         foreach ($optimalRoute as $order => $destIndex) {
             $destination = $destinations[$destIndex - 1]; // -1 because route indices start from 1
             $distance = $distanceMatrix[$currentIndex][$destIndex];
-            
+
             // Get duration from cache or calculate
             $duration = $this->getDuration($currentIndex == 0 ? $startPoint : $destinations[$currentIndex - 1], $destination);
 
@@ -568,10 +517,10 @@ class ItineraryController extends Controller
         // Try to get from cache first using coordinates
         // Only check exact direction (from -> to), NOT reverse direction
         $cache = DistanceCache::where('from_lat', $fromPoint['lat'])
-                              ->where('from_long', $fromPoint['long'])
-                              ->where('to_lat', $toPoint['lat'])
-                              ->where('to_long', $toPoint['long'])
-                              ->first();
+            ->where('from_long', $fromPoint['long'])
+            ->where('to_lat', $toPoint['lat'])
+            ->where('to_long', $toPoint['long'])
+            ->first();
 
         if ($cache) {
             return $cache->duration;
@@ -596,10 +545,10 @@ class ItineraryController extends Controller
         try {
             // Build coordinates array in order: [longitude, latitude]
             $coordinates = [];
-            
+
             // Add start point
             $coordinates[] = [(float)$startPoint['long'], (float)$startPoint['lat']];
-            
+
             // Add destinations in optimal order
             foreach ($optimalRoute as $destIndex) {
                 $destination = $destinations[$destIndex - 1];
@@ -632,11 +581,11 @@ class ItineraryController extends Controller
 
             if ($httpCode === 200 && $response) {
                 $data = json_decode($response, true);
-                
+
                 // OpenRouteService API returns 'routes' array, not 'features'
                 if (isset($data['routes'][0]['geometry'])) {
                     $geometryString = $data['routes'][0]['geometry'];
-                    
+
                     // Return encoded polyline to be decoded in JS
                     return [
                         'type' => 'success',
@@ -651,24 +600,23 @@ class ItineraryController extends Controller
             if ($response) {
                 Log::warning('API Response: ' . substr($response, 0, 500));
             }
-            
+
             // Fallback: return straight lines
             return [
                 'type' => 'fallback',
                 'coordinates' => $coordinates,
                 'geometry' => null
             ];
-
         } catch (\Exception $e) {
             Log::error('Error getting route geometry: ' . $e->getMessage());
-            
+
             // Fallback
             $coordinates = [[$startPoint['long'], $startPoint['lat']]];
             foreach ($optimalRoute as $destIndex) {
                 $destination = $destinations[$destIndex - 1];
                 $coordinates[] = [$destination['long'], $destination['lat']];
             }
-            
+
             return [
                 'type' => 'fallback',
                 'coordinates' => $coordinates,
@@ -687,7 +635,7 @@ class ItineraryController extends Controller
         }
 
         $itineraryData = session('itinerary_data');
-        
+
         return view('itinerary.result', compact('itineraryData'));
     }
 }

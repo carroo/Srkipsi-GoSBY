@@ -19,26 +19,9 @@
     <nav class="bg-white/95 backdrop-blur-md border-b border-gray-100 top-0 z-50 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
-                <!-- Logo & Title (Left) -->
-                <a href="/" class="flex items-center space-x-3 shrink-0 group">
-                    <div class="relative">
-                        <div
-                            class="absolute inset-0 bg-linear-to-r from-blue-600 to-indigo-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-300">
-                        </div>
-                        <div class="relative bg-linear-to-r from-blue-600 to-indigo-600 p-2 rounded-lg">
-                            <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path
-                                    d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5.951-1.429 5.951 1.429a1 1 0 001.169-1.409l-7-14z">
-                                </path>
-                            </svg>
-                        </div>
-                    </div>
-                    <div>
-                        <h1
-                            class="text-2xl font-bold bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                            GoSBY</h1>
-                        <p class="text-xs font-medium text-gray-500 hidden sm:block">Smart Travel Planning</p>
-                    </div>
+                <!-- Logo (Left) -->
+                <a href="/" class="flex items-center">
+                    <img src="{{ asset('img/logo.png') }}" alt="GoSBY Logo" class="h-24">
                 </a>
 
                 <!-- Right Side - Auth Buttons -->
@@ -67,7 +50,7 @@
 
                     @auth('web')
                         <div class="relative">
-                            <button id="userMenuButton"
+                            <button id="userMenuButton" type="button"
                                 class="flex items-center space-x-2 px-3 sm:px-4 py-2 text-gray-700 font-medium hover:bg-gray-50 rounded-lg transition duration-300">
                                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
@@ -214,36 +197,47 @@
     </nav>
 
     <script>
-        // Mobile menu toggle
-        document.getElementById('mobile-menu-btn').addEventListener('click', function() {
-            const menu = document.getElementById('mobile-menu');
-            menu.classList.toggle('hidden');
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mobile menu toggle
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            if (mobileMenuBtn) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    const menu = document.getElementById('mobile-menu');
+                    menu.classList.toggle('hidden');
+                });
+
+                // Close mobile menu when clicking on links
+                document.querySelectorAll('#mobile-menu a').forEach(link => {
+                    link.addEventListener('click', function() {
+                        document.getElementById('mobile-menu').classList.add('hidden');
+                    });
+                });
+            }
+
+            // User dropdown toggle
+            const userMenuButton = document.getElementById('userMenuButton');
+            const userDropdown = document.getElementById('userDropdown');
+
+            console.log('userMenuButton:', userMenuButton); // Debug log
+            console.log('userDropdown:', userDropdown); // Debug log
+
+            if (userMenuButton && userDropdown) {
+                userMenuButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Button clicked!'); // Debug log
+                    userDropdown.classList.toggle('hidden');
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!userMenuButton.contains(e.target) && !userDropdown.contains(e.target)) {
+                        userDropdown.classList.add('hidden');
+                    }
+                });
+            }
         });
-
-        // Close mobile menu when clicking on links
-        document.querySelectorAll('#mobile-menu a').forEach(link => {
-            link.addEventListener('click', function() {
-                document.getElementById('mobile-menu').classList.add('hidden');
-            });
-        });
-
-        // User dropdown toggle
-        const userMenuButton = document.getElementById('userMenuButton');
-        const userDropdown = document.getElementById('userDropdown');
-
-        if (userMenuButton && userDropdown) {
-            userMenuButton.addEventListener('click', function(e) {
-                e.stopPropagation();
-                userDropdown.classList.toggle('hidden');
-            });
-
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!userMenuButton.contains(e.target) && !userDropdown.contains(e.target)) {
-                    userDropdown.classList.add('hidden');
-                }
-            });
-        }
     </script>
 
     <!-- Main Content -->
@@ -254,7 +248,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-900 text-gray-300 py-12 mt-12">
+    <footer class="bg-gray-900 text-gray-300 py-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid md:grid-cols-4 gap-8 mb-8">
                 <div>

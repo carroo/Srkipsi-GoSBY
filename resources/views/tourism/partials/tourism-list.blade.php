@@ -3,7 +3,7 @@
 @foreach($tourisms as $index => $tourism)
     <div class="tourism-card bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition duration-300 transform hover:scale-105 group animate-fade-in-up"
        style="animation-delay: {{ ($index % 9) * 0.05 }}s;"
-       data-index="{{ $index }}">>
+       data-index="{{ $index }}">
         <a href="{{ route('tourism.show', $tourism->id) }}" class="block">
 
         <!-- Image -->

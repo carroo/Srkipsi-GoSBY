@@ -14,11 +14,7 @@
         <!-- Logo and Title -->
         <div class="text-center">
             <div class="flex justify-center">
-                <div class="bg-linear-to-r from-blue-600 to-indigo-600 p-4 rounded-2xl shadow-lg">
-                    <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5.951-1.429 5.951 1.429a1 1 0 001.169-1.409l-7-14z"></path>
-                    </svg>
-                </div>
+                    <img src="{{ asset('img/logo.png') }}" alt="GoSBY Logo" class="h-36 object-contain">
             </div>
             <h2 class="mt-6 text-4xl font-black text-gray-900">Selamat Datang</h2>
             <p class="mt-2 text-sm text-gray-600">Masuk ke akun Anda untuk melanjutkan</p>

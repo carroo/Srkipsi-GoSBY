@@ -17,7 +17,7 @@ class LandingController extends Controller
     {
         // Get popular tourism destinations (top 6 based on rating)
         $popularTourism = Tourism::with(['categories', 'prices', 'files'])
-            ->orderByDesc('rating')
+            ->orderByDesc('popularity')
             ->limit(6)
             ->get();
 

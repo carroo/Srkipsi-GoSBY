@@ -15,11 +15,7 @@
         <!-- Logo and Title -->
         <div class="text-center">
             <div class="flex justify-center">
-                <div class="bg-linear-to-r from-red-600 to-orange-600 p-4 rounded-2xl shadow-lg">
-                    <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd"></path>
-                    </svg>
-                </div>
+                <img src="{{ asset('img/logo.png') }}" class="h-36 bg-white rounded-xl" alt="">
             </div>
             <h2 class="mt-6 text-4xl font-black text-white">Admin Portal</h2>
             <p class="mt-2 text-sm text-gray-400">Masuk ke panel administrasi</p>
