@@ -35,6 +35,14 @@ class Itinerary extends Model
     }
 
     /**
+     * Get the user who created this itinerary
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
      * Get the itinerary details (destinations)
      */
     public function details()

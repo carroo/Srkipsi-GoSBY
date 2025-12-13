@@ -64,33 +64,16 @@
                             </button>
                             <div id="userDropdown"
                                 class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-100">
-                                <a href="{{ route('tourism.index') }}"
-                                    class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 transition duration-200">
-                                    <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z">
-                                        </path>
-                                    </svg>
-                                    <span>Rekomendasikan</span>
-                                </a>
-                                <a href="{{ route('itinerary.create') }}"
+                                <a href="{{ route('itinerary.list') }}"
                                     class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 transition duration-200">
                                     <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
                                         </path>
                                     </svg>
-                                    <span>Jadwalkan</span>
+                                    <span>Penjadwalan Tersimpan</span>
                                 </a>
                                 <div class="border-t border-gray-100 my-1"></div>
-                                <a href="#"
-                                    class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 transition duration-200">
-                                    <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                    </svg>
-                                    <span>Profil</span>
-                                </a>
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
                                     <button type="submit"
@@ -157,13 +140,14 @@
                 @auth('web')
                     <!-- Authenticated User Menu -->
                     <div class="pt-2 border-t border-gray-100 space-y-2">
-                        <a href="#"
+                        <a href="{{ route('itinerary.list') }}"
                             class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg font-medium transition duration-300">
                             <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                </path>
                             </svg>
-                            <span>Profil</span>
+                            <span>Penjadwalan Tersimpan</span>
                         </a>
 
                         <form method="POST" action="{{ route('logout') }}">

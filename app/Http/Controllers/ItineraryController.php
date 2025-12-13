@@ -15,6 +15,24 @@ use Carbon\Carbon;
 
 class ItineraryController extends Controller
 {
+    /**
+     * Display list of user's itineraries
+     */
+    public function list()
+    {
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        // Get all itineraries for the authenticated user with details
+        $itineraries = Itinerary::where('user_id', Auth::id())
+            ->with(['details', 'startPoint'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return view('itinerary.list', compact('itineraries'));
+    }
+
     public function create()
     {
         if (!Auth::check()) {
@@ -851,5 +869,36 @@ class ItineraryController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Delete itinerary
+     */
+    public function destroy($id)
+    {
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        try {
+            $itinerary = Itinerary::findOrFail($id);
+
+            // Check authorization
+            if ($itinerary->user_id !== Auth::id()) {
+                return redirect()->back()->with('error', 'Anda tidak memiliki akses untuk menghapus penjadwalan ini');
+            }
+
+            // Delete related details first
+            ItineraryDetail::where('itinerary_id', $itinerary->id)->delete();
+
+            // Delete itinerary
+            $itinerary->delete();
+
+            return redirect()->route('itinerary.list')->with('success', 'Penjadwalan berhasil dihapus');
+        } catch (\Exception $e) {
+            Log::error('Error deleting itinerary: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal menghapus penjadwalan');
+        }
+    }
 }
+
 

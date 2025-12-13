@@ -44,6 +44,13 @@
             <span class="ml-3 font-medium">Matriks Jarak</span>
         </a>
 
+        <!-- Itinerary -->
+        <a href="{{ route('admin.itinerary.index') }}"
+           class="sidebar-link flex items-center px-4 py-3 mb-1 rounded-lg {{ request()->routeIs('admin.itinerary.*') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50' }}">
+            <i class="fas fa-route w-5 {{ request()->routeIs('admin.itinerary.*') ? 'text-blue-600' : 'text-gray-400' }}"></i>
+            <span class="ml-3 font-medium">Itinerary</span>
+        </a>
+
         <!-- Divider -->
         <div class="my-4 border-t border-gray-200"></div>
         <p class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Manajemen</p>
