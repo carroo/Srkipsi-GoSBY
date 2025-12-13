@@ -16,6 +16,7 @@ class Itinerary extends Model
         'total_distance',
         'total_duration',
         'polyline_encode',
+        'user_id',
     ];
 
     protected $casts = [

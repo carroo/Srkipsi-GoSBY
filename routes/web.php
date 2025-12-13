@@ -30,6 +30,7 @@ Route::get('/admin/login', [LoginController::class, 'showAdminLoginForm'])->name
 Route::post('/admin/login', [LoginController::class, 'adminLogin'])->name('admin.login.submit');
 Route::post('/admin/logout', [LoginController::class, 'adminLogout'])->name('admin.logout');
 
+Route::get('/itinerary/result/{id}', [ItineraryController::class, 'result'])->name('itinerary.result');
 // Trip Cart Routes (Protected)
 Route::middleware('auth:web')->group(function () {
     Route::post('/trip-cart/add', [TripCartController::class, 'add'])->name('trip-cart.add');
@@ -40,7 +41,6 @@ Route::middleware('auth:web')->group(function () {
     Route::get('/itinerary/create', [ItineraryController::class, 'create'])->name('itinerary.create');
     Route::post('/itinerary/generate', [ItineraryController::class, 'generate'])->name('itinerary.generate');
     Route::post('/itinerary/save', [ItineraryController::class, 'save'])->name('itinerary.save');
-    Route::get('/itinerary/result', [ItineraryController::class, 'result'])->name('itinerary.result');
     Route::get('/itinerary/{id}', [ItineraryController::class, 'show'])->name('itinerary.show');
 });
 

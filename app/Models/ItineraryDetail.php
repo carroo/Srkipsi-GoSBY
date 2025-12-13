@@ -9,6 +9,8 @@ class ItineraryDetail extends Model
     protected $fillable = [
         'itinerary_id',
         'tourism_id',
+        'lat',
+        'long',
         'order',
         'arrival_time',
         'stay_duration',

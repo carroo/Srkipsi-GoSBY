@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class ItineraryController extends Controller
 {
@@ -115,9 +116,70 @@ class ItineraryController extends Controller
         // Get route geometry for map visualization
         $routeGeometry = $this->getRouteGeometry($startPoint, $destinations, $optimalRoute);
 
+        // Save itinerary to database
+        $savedItinerary = Itinerary::create([
+            'user_id' => Auth::id(),
+            'name' => $request->name,
+            'travel_date' => $request->travel_date,
+            'start_time' => '07:00:00',
+            'start_point_id' => $startPoint['type'] === 'tourism' ? $startPoint['id'] : null,
+            'start_point_lat' => $startPoint['lat'],
+            'start_point_long' => $startPoint['long'],
+            'total_distance' => $itinerary['total_distance'],
+            'total_duration' => $itinerary['total_duration'],
+            'polyline_encode' => $routeGeometry['geometry'] ?? null,
+            'status' => 'draft',
+        ]);
+
+        // Save itinerary details to database
+        $startTime = Carbon::createFromFormat('Y-m-d H:i:s', $request->travel_date . ' 07:00:00');
+        $cumulativeDuration = 0;
+
+        foreach ($itinerary['route'] as $detail) {
+            // Calculate arrival time for each stop including start point
+            $arrivalTime = $startTime->copy()->addSeconds($cumulativeDuration);
+
+            if ($detail['order'] === 0) {
+                // For start point, we still save it
+                $tourismId = $startPoint['type'] === 'tourism' ? $startPoint['id'] : null;
+                
+                ItineraryDetail::create([
+                    'itinerary_id' => $savedItinerary->id,
+                    'tourism_id' => $tourismId,
+                    'lat' => $startPoint['lat'],
+                    'long' => $startPoint['long'],
+                    'order' => $detail['order'],
+                    'arrival_time' => $arrivalTime->format('H:i:s'),
+                    'stay_duration' => $tourismId ? 60 : 0,
+                    'distance_from_previous' => 0,
+                    'duration_from_previous' => 0,
+                ]);
+
+                // Add stay duration to cumulative if it's a tourism location
+                if ($startPoint['type'] === 'tourism') {
+                    $cumulativeDuration += 60 * 60; // 60 minutes stay at start point
+                }
+            } else {
+                ItineraryDetail::create([
+                    'itinerary_id' => $savedItinerary->id,
+                    'tourism_id' => $detail['destination']['id'],
+                    'lat' => $detail['destination']['lat'],
+                    'long' => $detail['destination']['long'],
+                    'order' => $detail['order'],
+                    'arrival_time' => $arrivalTime->format('H:i:s'),
+                    'stay_duration' => 60, // Default 60 minutes
+                    'distance_from_previous' => $detail['distance_from_previous'],
+                    'duration_from_previous' => $detail['duration_from_previous'],
+                ]);
+
+                // Update cumulative duration for next arrival time (travel + stay)
+                $cumulativeDuration += $detail['duration_from_previous'] + (60 * 60); // duration + 60 minutes stay
+            }
+        }
         // Store in session for result page
         session([
             'itinerary_data' => [
+                'id' => $savedItinerary->id,
                 'name' => $request->name,
                 'travel_date' => $request->travel_date,
                 'start_point' => $startPoint,
@@ -133,7 +195,8 @@ class ItineraryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Itinerary berhasil dibuat!',
-            'redirect_url' => route('itinerary.result')
+            'itinerary_id' => $savedItinerary->id,
+            'redirect_url' => route('itinerary.result', ['id' => $savedItinerary->id])
         ]);
     }
 
@@ -630,19 +693,94 @@ class ItineraryController extends Controller
     /**
      * Show itinerary result
      */
-    public function result()
+    public function result($id)
     {
-        if (!session()->has('itinerary_data')) {
-            return redirect()->route('itinerary.create')->with('error', 'Data itinerary tidak ditemukan!');
+        // Get itinerary with details from database
+        $itinerary = Itinerary::with(['details.tourism', 'startPoint'])->findOrFail($id);
+        // dd($itinerary);
+
+        // Always build data from database
+        // Build route array from itinerary details
+        $route = [];
+        foreach ($itinerary->details as $detail) {
+            if ($detail->order === 0) {
+                // Start point
+                $destination = [
+                    'id' => $itinerary->start_point_id,
+                    'name' => $itinerary->startPoint->name ?? 'Lokasi Awal',
+                    'lat' => $itinerary->start_point_lat,
+                    'long' => $itinerary->start_point_long,
+                    'type' => $itinerary->start_point_id ? 'tourism' : 'custom',
+                ];
+                if ($itinerary->startPoint) {
+                    $destination['tourism'] = $itinerary->startPoint;
+                }
+            } else {
+                // Other destinations
+                $destination = [
+                    'id' => $detail->tourism_id,
+                    'name' => $detail->tourism->name ?? 'Destinasi',
+                    'lat' => $detail->tourism->latitude,
+                    'long' => $detail->tourism->longitude,
+                    'tourism' => $detail->tourism,
+                ];
+            }
+
+            $route[] = [
+                'order' => $detail->order,
+                'destination' => $destination,
+                'arrival_time' => $detail->arrival_time,
+                'stay_duration' => $detail->stay_duration,
+                'distance_from_previous' => $detail->distance_from_previous,
+                'duration_from_previous' => $detail->duration_from_previous,
+            ];
         }
 
-        $itineraryData = session('itinerary_data');
+        // Build start point
+        $startPoint = [
+            'id' => $itinerary->start_point_id,
+            'lat' => $itinerary->start_point_lat,
+            'long' => $itinerary->start_point_long,
+            'name' => $itinerary->startPoint->name ?? 'Lokasi Awal',
+            'type' => $itinerary->start_point_id ? 'tourism' : 'custom',
+        ];
 
-        return view('itinerary.result', compact('itineraryData'));
+        // Build itinerary data from database
+        $itineraryData = [
+            'id' => $itinerary->id,
+            'name' => $itinerary->name,
+            'is_owner' => Auth::check() && Auth::id() === $itinerary->user_id,
+            'travel_date' => $itinerary->travel_date,
+            'start_time' => date('H:i', strtotime($itinerary->start_time)),
+            'start_point' => $startPoint,
+            'total_distance' => $itinerary->total_distance,
+            'total_duration' => $itinerary->total_duration,
+            'status' => $itinerary->status,
+            'route' => [
+                'route' => $route,
+                'total_distance' => $itinerary->total_distance,
+                'total_duration' => $itinerary->total_duration,
+            ],
+            'route_geometry' => [
+                'type' => 'fallback',
+                'geometry' => $itinerary->polyline_encode,
+                'coordinates' => []
+            ],
+        ];
+
+        // Only get distance_matrix from session if available
+        if (session()->has('itinerary_data') && isset(session('itinerary_data')['distance_matrix'])) {
+            $itineraryData['distance_matrix'] = session('itinerary_data')['distance_matrix'];
+        } else {
+            $itineraryData['distance_matrix'] = [];
+        }
+        // dd($itineraryData);
+
+        return view('itinerary.result', compact('itineraryData', 'itinerary'));
     }
 
     /**
-     * Save itinerary to database
+     * Save itinerary - update only start_time and stay_duration
      */
     public function save(Request $request)
     {
@@ -650,85 +788,68 @@ class ItineraryController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        // Validate input
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'travel_date' => 'required|date',
-            'start_time' => 'required|date_format:H:i',
-            'start_point_id' => 'nullable|exists:tourism,id',
-            'start_point_lat' => 'nullable|numeric',
-            'start_point_long' => 'nullable|numeric',
-            'total_distance' => 'required|integer|min:0',
-            'total_duration' => 'required|integer|min:0',
-            'polyline_encode' => 'nullable|string',
-            'details' => 'required|array|min:1',
-            'details.*.tourism_id' => 'nullable|exists:tourism,id',
-            'details.*.order' => 'required|integer|min:0',
-            'details.*.arrival_time' => 'nullable',
-            'details.*.stay_duration' => 'required|integer|min:0',
-            'details.*.distance_from_previous' => 'required|integer|min:0',
-            'details.*.duration_from_previous' => 'required|integer|min:0',
-        ]);
-
         try {
-            DB::beginTransaction();
-
-            // Create itinerary
-            $itinerary = Itinerary::create([
-                'name' => $request->name,
-                'travel_date' => $request->travel_date,
-                'start_time' => $request->start_time,
-                'start_point_id' => $request->start_point_id,
-                'start_point_lat' => $request->start_point_lat,
-                'start_point_long' => $request->start_point_long,
-                'total_distance' => $request->total_distance,
-                'total_duration' => $request->total_duration,
-                'polyline_encode' => $request->polyline_encode,
+            $request->validate([
+                'start_time' => 'required|date_format:H:i',
+                'details' => 'required|array',
+                'details.*.order' => 'required|integer',
+                'details.*.stay_duration' => 'required|integer|min:0',
             ]);
 
-            // Create itinerary details
-            foreach ($request->details as $detail) {
-                ItineraryDetail::create([
-                    'itinerary_id' => $itinerary->id,
-                    'tourism_id' => $detail['tourism_id'],
-                    'order' => $detail['order'],
-                    'arrival_time' => $detail['arrival_time'],
-                    'stay_duration' => $detail['stay_duration'],
-                    'distance_from_previous' => $detail['distance_from_previous'],
-                    'duration_from_previous' => $detail['duration_from_previous'],
-                ]);
+            // Get itinerary from session or request
+            $itineraryId = $request->input('itinerary_id');
+            
+            if (!$itineraryId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Itinerary ID tidak ditemukan'
+                ], 400);
             }
 
-            DB::commit();
+            $itinerary = Itinerary::findOrFail($itineraryId);
 
-            // Clear session data
-            session()->forget('itinerary_data');
+            // Check authorization
+            if ($itinerary->user_id !== Auth::id()) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            }
+
+            // Update start_time
+            $itinerary->start_time = $request->input('start_time');
+            $itinerary->save();
+
+            // Update stay_duration for each detail
+            $details = $request->input('details', []);
+            
+            foreach ($details as $detail) {
+                $itineraryDetail = ItineraryDetail::where('itinerary_id', $itinerary->id)
+                    ->where('order', $detail['order'])
+                    ->first();
+
+                if ($itineraryDetail) {
+                    $itineraryDetail->stay_duration = $detail['stay_duration'];
+                    $itineraryDetail->save();
+                }
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Itinerary berhasil disimpan!',
-                'itinerary_id' => $itinerary->id,
-                'redirect_url' => route('itinerary.show', $itinerary->id)
+                'message' => 'Itinerary berhasil disimpan',
+                'redirect_url' => route('itinerary.result', $itinerary->id)
             ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error saving itinerary: ' . $e->getMessage());
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menyimpan itinerary: ' . $e->getMessage()
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error saving itinerary: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
-     * Show saved itinerary
-     */
-    public function show($id)
-    {
-        $itinerary = Itinerary::with(['startPoint', 'details.tourism'])->findOrFail($id);
-
-        return view('itinerary.show', compact('itinerary'));
     }
 }
 

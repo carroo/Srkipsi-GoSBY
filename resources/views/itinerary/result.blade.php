@@ -154,7 +154,7 @@
                     </div>
                     <div class="stats-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
                         <div class="stats-label">Waktu Mulai</div>
-                        <input type="time" id="start_time" value="08:00"
+                        <input type="time" id="start_time" value="{{ $itineraryData['start_time'] ?? '07:00' }}"
                             class="w-full border border-none bg-transparent text-white font-bold text-lg mt-2 focus:outline-none focus:ring-2 focus:ring-white rounded px-2 py-1"
                             onchange="calculateTimes()">
                     </div>
@@ -175,34 +175,40 @@
                     </div>
                     <div class="stats-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
                         <div class="stats-label">Total Destinasi</div>
-                        <div class="stats-value">{{ count($itineraryData['route']['route']) }}</div>
+                        <div class="stats-value">
+                            @if(isset($itineraryData['route']))
+                                {{ count($itineraryData['route']['route']) }}
+                            @else
+                                {{ count($itineraryData['details'] ?? []) }}
+                            @endif
+                        </div>
                     </div>
                 </div>
 
                 <!-- Action Buttons -->
                 <div class="flex flex-wrap gap-3">
-                    <button onclick="openSaveModal()"
-                        class="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V5"></path>
-                        </svg>
-                        Simpan Itinerary
-                    </button>
-                    <a href="{{ route('itinerary.create') }}"
+                    @if ($itineraryData['is_owner'])
+                        <button onclick="openSaveModal()"
+                            class="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V5"></path>
+                            </svg>
+                            Simpan Itinerary
+                        </button>
+                    @endif
+                    <button onclick="shareItinerary()"
                         class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                         </svg>
-                        Buat Itinerary Baru
-                    </a>
-                    <button onclick="window.print()"
-                        class="px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors duration-200 flex items-center">
+                        Bagikan
+                    </button>
+                    <button onclick="openGoogleMapsRoute()"
+                        class="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
-                            </path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 003 16.382V5.618a1 1 0 011.553-.894L9 7.382v12.618zM15 20l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.553-.894L15 7.382v12.618zM9 7h6"></path>
                         </svg>
-                        Cetak
+                        Kunjungi di Google Maps
                     </button>
                 </div>
             </div>
@@ -478,53 +484,63 @@
                     <!-- Matrix Tab -->
                     <div id="matrix-tab" class="tab-pane">
                         @php
-                            $allPoints = array_merge([$itineraryData['start_point']], $itineraryData['destinations']);
-                            $matrix = $itineraryData['distance_matrix'];
+                            // Build points array from route
+                            $allPoints = [];
+                            foreach ($itineraryData['route']['route'] as $stop) {
+                                $allPoints[] = $stop['destination'];
+                            }
+                            $matrix = $itineraryData['distance_matrix'] ?? [];
                         @endphp
                         <div class="overflow-x-auto">
-                            <table class="min-w-full border-collapse">
-                                <thead>
-                                    <tr>
-                                        <th
-                                            class="border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700">
-                                            Dari / Ke</th>
-                                        @foreach ($allPoints as $index => $point)
-                                            <th
-                                                class="border border-gray-300 bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-900">
-                                                @if ($index == 0)
-                                                    <span class="text-lg">Start</span>
-                                                @else
-                                                    <span class="text-lg">{{ $index }}</span>
-                                                @endif
-                                            </th>
-                                        @endforeach
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($allPoints as $i => $fromPoint)
+                            @if(count($matrix) > 0)
+                                <table class="min-w-full border-collapse">
+                                    <thead>
                                         <tr>
-                                            <td
-                                                class="border border-gray-300 bg-purple-50 px-4 py-2 font-semibold text-sm text-purple-900">
-                                                @if ($i == 0)
-                                                    Start
-                                                @else
-                                                    {{ $i }}
-                                                @endif
-                                            </td>
-                                            @foreach ($allPoints as $j => $toPoint)
-                                                <td
-                                                    class="border border-gray-300 px-4 py-2 text-center text-sm @if ($i == $j) bg-gray-200 text-gray-500 font-bold @else bg-white hover:bg-blue-50 @endif">
-                                                    @if ($i == $j)
-                                                        -
+                                            <th
+                                                class="border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700">
+                                                Dari / Ke</th>
+                                            @foreach ($allPoints as $index => $point)
+                                                <th
+                                                    class="border border-gray-300 bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-900">
+                                                    @if ($index == 0)
+                                                        <span class="text-lg">Start</span>
                                                     @else
-                                                        {{ number_format($matrix[$i][$j] / 1000, 2) }}
+                                                        <span class="text-lg">{{ $index }}</span>
                                                     @endif
-                                                </td>
+                                                </th>
                                             @endforeach
                                         </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($allPoints as $i => $fromPoint)
+                                            <tr>
+                                                <td
+                                                    class="border border-gray-300 bg-purple-50 px-4 py-2 font-semibold text-sm text-purple-900">
+                                                    @if ($i == 0)
+                                                        Start
+                                                    @else
+                                                        {{ $i }}
+                                                    @endif
+                                                </td>
+                                                @foreach ($allPoints as $j => $toPoint)
+                                                    <td
+                                                        class="border border-gray-300 px-4 py-2 text-center text-sm @if ($i == $j) bg-gray-200 text-gray-500 font-bold @else bg-white hover:bg-blue-50 @endif">
+                                                        @if ($i == $j)
+                                                            -
+                                                        @else
+                                                            {{ isset($matrix[$i][$j]) ? number_format($matrix[$i][$j] / 1000, 2) : 'N/A' }}
+                                                        @endif
+                                                    </td>
+                                                @endforeach
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            @else
+                                <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                    <p class="text-blue-800">Matriks jarak tidak tersedia. Data matriks hanya tersedia setelah generate itinerary baru.</p>
+                                </div>
+                            @endif
                         </div>
                     </div>
 
@@ -938,9 +954,112 @@
         }
 
         // ============================================
+        // SHARE ITINERARY FUNCTION
+        // ============================================
+        function shareItinerary() {
+            const itineraryData = {!! json_encode($itineraryData) !!};
+            
+            // Get current URL or construct it
+            const shareUrl = window.location.href;
+            
+            try {
+                // Try to copy to clipboard using the modern API
+                navigator.clipboard.writeText(shareUrl).then(function() {
+                    // Show success message
+                    const message = document.createElement('div');
+                    message.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse';
+                    message.textContent = '✓ Link berhasil disalin ke clipboard!';
+                    document.body.appendChild(message);
+                    
+                    // Remove message after 3 seconds
+                    setTimeout(() => {
+                        message.remove();
+                    }, 3000);
+                }).catch(function(err) {
+                    // Fallback for older browsers
+                    fallbackCopyToClipboard(shareUrl);
+                });
+            } catch (err) {
+                // Fallback for older browsers
+                fallbackCopyToClipboard(shareUrl);
+            }
+        }
+        
+        // Fallback function for older browsers
+        function fallbackCopyToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                const message = document.createElement('div');
+                message.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse';
+                message.textContent = '✓ Link berhasil disalin ke clipboard!';
+                document.body.appendChild(message);
+                
+                setTimeout(() => {
+                    message.remove();
+                }, 3000);
+            } catch (err) {
+                alert('❌ Gagal menyalin link ke clipboard');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        // ============================================
+        // GOOGLE MAPS ROUTE FUNCTION
+        // ============================================
+        function openGoogleMapsRoute() {
+            const itineraryData = {!! json_encode($itineraryData) !!};
+            
+            // Get all coordinates from the route
+            const coordinates = [];
+            
+            // Add start point
+            if (itineraryData.start_point) {
+                coordinates.push(`${itineraryData.start_point.lat},${itineraryData.start_point.long}`);
+            }
+            
+            // Add all destinations
+            if (itineraryData.route && itineraryData.route.route) {
+                itineraryData.route.route.forEach(stop => {
+                    if (stop.order > 0 && stop.destination) {
+                        coordinates.push(`${stop.destination.lat},${stop.destination.long}`);
+                    }
+                });
+            }
+            
+            if (coordinates.length < 2) {
+                alert('❌ Koordinat tidak cukup untuk membuka Google Maps');
+                return;
+            }
+            
+            // Build Google Maps URL
+            const googleMapsUrl = `https://www.google.com/maps/dir/${coordinates.join('/')}`;
+            
+            console.log('🗺️ Google Maps URL:', googleMapsUrl);
+            
+            // Open in new tab
+            window.open(googleMapsUrl, '_blank');
+        }
+
+        // ============================================
         // MODAL FUNCTIONS
         // ============================================
         function openSaveModal() {
+            const itineraryData = {!! json_encode($itineraryData) !!};
+            
+            // Check if user is owner
+            if (!itineraryData.is_owner) {
+                alert('❌ Hanya pemilik itinerary yang dapat mengedit');
+                return;
+            }
+            
             const startTime = document.getElementById('start_time').value;
             document.getElementById('modalStartTime').textContent = startTime;
             document.getElementById('saveModal').classList.remove('hidden');
@@ -980,7 +1099,7 @@
             // Get data dari session yang sudah disimpan
             const itineraryData = {!! json_encode($itineraryData) !!};
 
-            // Build details array from table dengan stay duration yang sudah diatur
+            // Build details array from table - HANYA untuk stay_duration
             const details = [];
             const rows = document.querySelectorAll('tbody tr');
 
@@ -991,11 +1110,7 @@
                 if (tourism) {
                     const detail = {
                         order: tourism.order,
-                        tourism_id: tourism.destination.id || null,
-                        arrival_time: row.querySelector('.arrival-time')?.textContent || null,
                         stay_duration: stayDurationInput ? parseInt(stayDurationInput.value) || 0 : 0,
-                        distance_from_previous: tourism.distance_from_previous || 0,
-                        duration_from_previous: tourism.duration_from_previous || 0
                     };
                     
                     // Hanya include detail jika punya tourism_id atau bukan start point
@@ -1009,17 +1124,10 @@
                 }
             });
 
-            // Build payload - ambil langsung dari session
+            // Build payload - HANYA start_time dan stay_duration
             const payload = {
-                name: itineraryData.name,
-                travel_date: itineraryData.travel_date,
+                itinerary_id: itineraryData.id,
                 start_time: startTime,
-                start_point_id: itineraryData.start_point.type === 'tourism' ? itineraryData.start_point.id : null,
-                start_point_lat: itineraryData.start_point.type === 'custom' ? itineraryData.start_point.lat : null,
-                start_point_long: itineraryData.start_point.type === 'custom' ? itineraryData.start_point.long : null,
-                total_distance: itineraryData.total_distance,
-                total_duration: itineraryData.total_duration,
-                polyline_encode: itineraryData.route_geometry.geometry || null,
                 details: details,
                 _token: '{{ csrf_token() }}'
             };

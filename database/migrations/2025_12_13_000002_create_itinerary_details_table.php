@@ -18,8 +18,13 @@ return new class extends Migration
                   ->cascadeOnDelete();
             
             $table->foreignId('tourism_id')
+                  ->nullable()
                   ->constrained('tourism')
                   ->cascadeOnDelete();
+            
+            // Koordinat lokasi
+            $table->decimal('lat', 10, 8)->nullable();
+            $table->decimal('long', 11, 8)->nullable();
             
             // Urutan kunjungan (0, 1, 2, ...)
             $table->integer('order');
