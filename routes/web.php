@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\TourismController as AdminTourismController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\DistanceMatrixController;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 
@@ -38,8 +39,9 @@ Route::middleware('auth:web')->group(function () {
     // Itinerary Routes
     Route::get('/itinerary/create', [ItineraryController::class, 'create'])->name('itinerary.create');
     Route::post('/itinerary/generate', [ItineraryController::class, 'generate'])->name('itinerary.generate');
-    // Route::post('/itinerary/store', [ItineraryController::class, 'store'])->name('itinerary.store');
+    Route::post('/itinerary/save', [ItineraryController::class, 'save'])->name('itinerary.save');
     Route::get('/itinerary/result', [ItineraryController::class, 'result'])->name('itinerary.result');
+    Route::get('/itinerary/{id}', [ItineraryController::class, 'show'])->name('itinerary.show');
 });
 
 // Admin Routes (Protected)
@@ -61,6 +63,10 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
     Route::get('/categories/{id}', [CategoryController::class, 'show'])->name('categories.show');
     Route::put('/categories/{id}', [CategoryController::class, 'update'])->name('categories.update');
     Route::delete('/categories/{id}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+
+    // Distance Matrix
+    Route::get('/distance-matrix', [DistanceMatrixController::class, 'index'])->name('distance-matrix.index');
+    Route::get('/distance-matrix/data', [DistanceMatrixController::class, 'getDistanceData'])->name('distance-matrix.data');
 
     // Placeholder routes for sidebar menu (will be implemented later)
     Route::get('/users', function() { return 'Users Management'; })->name('users.index');

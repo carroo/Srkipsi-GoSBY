@@ -37,6 +37,13 @@
             <span class="ml-3 font-medium">Kategori</span>
         </a>
 
+        <!-- Distance Matrix -->
+        <a href="{{ route('admin.distance-matrix.index') }}"
+           class="sidebar-link flex items-center px-4 py-3 mb-1 rounded-lg {{ request()->routeIs('admin.distance-matrix.*') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50' }}">
+            <i class="fas fa-table w-5 {{ request()->routeIs('admin.distance-matrix.*') ? 'text-blue-600' : 'text-gray-400' }}"></i>
+            <span class="ml-3 font-medium">Matriks Jarak</span>
+        </a>
+
         <!-- Divider -->
         <div class="my-4 border-t border-gray-200"></div>
         <p class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Manajemen</p>

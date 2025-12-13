@@ -181,6 +181,13 @@
 
                 <!-- Action Buttons -->
                 <div class="flex flex-wrap gap-3">
+                    <button onclick="openSaveModal()"
+                        class="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V5"></path>
+                        </svg>
+                        Simpan Itinerary
+                    </button>
                     <a href="{{ route('itinerary.create') }}"
                         class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -575,6 +582,78 @@
 
         </div>
     </section>
+
+    <!-- Save Modal -->
+    <div id="saveModal" class="fixed inset-0 bg-black/30 hidden z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-4 rounded-t-xl">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-white">Simpan Itinerary</h3>
+                    <button onclick="closeSaveModal()" class="text-white hover:text-gray-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 space-y-4">
+                <!-- Summary Info -->
+                <div class="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Nama Itinerary:</span>
+                        <span class="font-semibold text-gray-900">{{ $itineraryData['name'] }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Tanggal Perjalanan:</span>
+                        <span class="font-semibold text-gray-900">{{ \Carbon\Carbon::parse($itineraryData['travel_date'])->format('d M Y') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Waktu Mulai:</span>
+                        <span class="font-semibold text-gray-900" id="modalStartTime">08:00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Total Destinasi:</span>
+                        <span class="font-semibold text-gray-900">{{ count($itineraryData['route']['route']) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Total Jarak:</span>
+                        <span class="font-semibold text-gray-900">{{ number_format($itineraryData['total_distance'] / 1000, 1) }} km</span>
+                    </div>
+                </div>
+
+                <!-- Info Box -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex items-start gap-2">
+                        <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                        </svg>
+                        <div class="text-sm text-blue-800">
+                            <p class="font-semibold">Tips:</p>
+                            <p class="mt-1">Silahkan sesuaikan durasi berkunjung di setiap destinasi sebelum menyimpan ke database.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-gray-50 px-6 py-4 rounded-b-xl flex gap-3 justify-end">
+                <button onclick="closeSaveModal()"
+                    class="px-4 py-2 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                    Batal
+                </button>
+                <button onclick="saveItinerary()"
+                    class="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V5"></path>
+                    </svg>
+                    Simpan
+                </button>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('scripts')
@@ -856,6 +935,139 @@
             const hours = Math.floor(totalMinutes / 60);
             const minutes = totalMinutes % 60;
             return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        }
+
+        // ============================================
+        // MODAL FUNCTIONS
+        // ============================================
+        function openSaveModal() {
+            const startTime = document.getElementById('start_time').value;
+            document.getElementById('modalStartTime').textContent = startTime;
+            document.getElementById('saveModal').classList.remove('hidden');
+        }
+
+        function closeSaveModal() {
+            document.getElementById('saveModal').classList.add('hidden');
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('saveModal');
+            if (event.target === modal) {
+                closeSaveModal();
+            }
+        });
+
+        // ============================================
+        // SAVE ITINERARY FUNCTION
+        // ============================================
+        function saveItinerary() {
+            // Ambil start_time dari input yang sudah ada di halaman
+            const startTime = document.getElementById('start_time').value;
+
+            // Validation
+            if (!startTime) {
+                alert('❌ Waktu mulai harus diisi!');
+                return;
+            }
+
+            // Show loading state
+            const saveButton = event.target.closest('button');
+            const originalHTML = saveButton.innerHTML;
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<span class="animate-spin inline-block mr-2">⏳</span>Menyimpan...';
+
+            // Get data dari session yang sudah disimpan
+            const itineraryData = {!! json_encode($itineraryData) !!};
+
+            // Build details array from table dengan stay duration yang sudah diatur
+            const details = [];
+            const rows = document.querySelectorAll('tbody tr');
+
+            rows.forEach((row, index) => {
+                const tourism = itineraryData.route.route[index];
+                const stayDurationInput = row.querySelector('.stay-duration');
+
+                if (tourism) {
+                    const detail = {
+                        order: tourism.order,
+                        tourism_id: tourism.destination.id || null,
+                        arrival_time: row.querySelector('.arrival-time')?.textContent || null,
+                        stay_duration: stayDurationInput ? parseInt(stayDurationInput.value) || 0 : 0,
+                        distance_from_previous: tourism.distance_from_previous || 0,
+                        duration_from_previous: tourism.duration_from_previous || 0
+                    };
+                    
+                    // Hanya include detail jika punya tourism_id atau bukan start point
+                    // Jika start point adalah custom (tanpa tourism), skip order 0
+                    if (tourism.order === 0 && itineraryData.start_point.type === 'custom') {
+                        // Skip order 0 ketika start point custom
+                        return;
+                    }
+                    
+                    details.push(detail);
+                }
+            });
+
+            // Build payload - ambil langsung dari session
+            const payload = {
+                name: itineraryData.name,
+                travel_date: itineraryData.travel_date,
+                start_time: startTime,
+                start_point_id: itineraryData.start_point.type === 'tourism' ? itineraryData.start_point.id : null,
+                start_point_lat: itineraryData.start_point.type === 'custom' ? itineraryData.start_point.lat : null,
+                start_point_long: itineraryData.start_point.type === 'custom' ? itineraryData.start_point.long : null,
+                total_distance: itineraryData.total_distance,
+                total_duration: itineraryData.total_duration,
+                polyline_encode: itineraryData.route_geometry.geometry || null,
+                details: details,
+                _token: '{{ csrf_token() }}'
+            };
+
+            console.log('📦 Payload yang akan dikirim:', payload);
+
+            // Send to server
+            fetch('{{ route("itinerary.save") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('✓ Response:', data);
+
+                if (data.success) {
+                    // Show success message
+                    closeSaveModal();
+                    alert('✓ Itinerary berhasil disimpan!');
+
+                    // Redirect to itinerary detail page
+                    if (data.redirect_url) {
+                        setTimeout(() => {
+                            window.location.href = data.redirect_url;
+                        }, 500);
+                    }
+                } else {
+                    alert('❌ Gagal menyimpan: ' + (data.message || 'Unknown error'));
+                    saveButton.disabled = false;
+                    saveButton.innerHTML = originalHTML;
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error:', error);
+                alert('❌ Terjadi kesalahan saat menyimpan: ' + error.message);
+                saveButton.disabled = false;
+                saveButton.innerHTML = originalHTML;
+            });
         }
 
         // ============================================
