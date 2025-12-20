@@ -207,6 +207,9 @@ class ItineraryController extends Controller
                 'total_duration' => $itinerary['total_duration'],
                 'distance_matrix' => $distanceMatrix,
                 'route_geometry' => $routeGeometry,
+                // DP steps sudah tersimpan di session oleh solveTSP()
+                'dp_steps' => session('dp_steps', []),
+                'dp_summary' => session('dp_summary', []),
             ]
         ]);
 
@@ -482,6 +485,9 @@ class ItineraryController extends Controller
         if ($n == 0) return [];
         if ($n == 1) return [1]; // Only one destination
 
+        // Array untuk menyimpan setiap langkah DP (untuk visualisasi/debugging)
+        $dpSteps = [];
+
         // DP table: dp[mask][i] = minimum distance to visit cities in mask, ending at city i
         $dp = [];
         $parent = [];
@@ -492,16 +498,55 @@ class ItineraryController extends Controller
             $parent[$mask] = array_fill(0, $n + 1, -1);
         }
 
+        // STEP 1: Initialization - simpan ke session
+        $dpSteps[] = [
+            'step_type' => 'INIT',
+            'step_number' => 1,
+            'description' => 'Inisialisasi tabel DP dengan nilai tak terhingga',
+            'total_states' => 1 << $n,
+            'timestamp' => microtime(true),
+        ];
+
         // Base case: starting from city 0 (start point) to each destination
+        $baseSteps = [];
         for ($i = 1; $i <= $n; $i++) {
-            $dp[1 << ($i - 1)][$i] = $distanceMatrix[0][$i];
+            $mask = 1 << ($i - 1);
+            $dp[$mask][$i] = $distanceMatrix[0][$i];
+            
+            $baseSteps[] = [
+                'destination' => $i,
+                'mask' => $mask,
+                'mask_binary' => str_pad(decbin($mask), $n, '0', STR_PAD_LEFT),
+                'distance' => $distanceMatrix[0][$i],
+            ];
         }
 
+        // STEP 2: Base Case - simpan ke session
+        $dpSteps[] = [
+            'step_type' => 'BASE_CASE',
+            'step_number' => 2,
+            'description' => 'Set jarak dari start point ke setiap destinasi pertama',
+            'base_cases' => $baseSteps,
+            'timestamp' => microtime(true),
+        ];
+
         // Fill DP table
+        $iterationCount = 0;
+        $transitionCount = 0;
+
         for ($mask = 0; $mask < (1 << $n); $mask++) {
             for ($last = 1; $last <= $n; $last++) {
                 if (!($mask & (1 << ($last - 1)))) continue;
                 if ($dp[$mask][$last] == PHP_INT_MAX) continue;
+
+                $iterationCount++;
+                $currentState = [
+                    'mask' => $mask,
+                    'mask_binary' => str_pad(decbin($mask), $n, '0', STR_PAD_LEFT),
+                    'last_city' => $last,
+                    'current_distance' => $dp[$mask][$last],
+                    'transitions' => [],
+                ];
 
                 for ($next = 1; $next <= $n; $next++) {
                     if ($mask & (1 << ($next - 1))) continue; // Already visited
@@ -509,40 +554,131 @@ class ItineraryController extends Controller
                     $newMask = $mask | (1 << ($next - 1));
                     $newDist = $dp[$mask][$last] + $distanceMatrix[$last][$next];
 
+                    $transitionData = [
+                        'to_city' => $next,
+                        'new_mask' => $newMask,
+                        'new_mask_binary' => str_pad(decbin($newMask), $n, '0', STR_PAD_LEFT),
+                        'edge_distance' => $distanceMatrix[$last][$next],
+                        'new_total_distance' => $newDist,
+                        'is_better' => $newDist < $dp[$newMask][$next],
+                        'old_distance' => $dp[$newMask][$next] == PHP_INT_MAX ? 'INF' : $dp[$newMask][$next],
+                    ];
+
                     if ($newDist < $dp[$newMask][$next]) {
                         $dp[$newMask][$next] = $newDist;
                         $parent[$newMask][$next] = $last;
+                        $transitionCount++;
+                    }
+
+                    $currentState['transitions'][] = $transitionData;
+                }
+
+                // Simpan state ini jika ada transisi
+                if (!empty($currentState['transitions'])) {
+                    // Batasi jumlah step yang disimpan (untuk performa)
+                    if (count($dpSteps) < 1000) {
+                        $dpSteps[] = [
+                            'step_type' => 'TRANSITION',
+                            'step_number' => count($dpSteps) + 1,
+                            'iteration' => $iterationCount,
+                            'state' => $currentState,
+                            'timestamp' => microtime(true),
+                        ];
                     }
                 }
             }
         }
 
+        // STEP 3: Summary iterasi
+        $dpSteps[] = [
+            'step_type' => 'ITERATION_COMPLETE',
+            'step_number' => count($dpSteps) + 1,
+            'description' => 'Semua iterasi DP selesai',
+            'total_iterations' => $iterationCount,
+            'total_transitions' => $transitionCount,
+            'timestamp' => microtime(true),
+        ];
+
         // Find the best ending city
         $fullMask = (1 << $n) - 1;
         $minDist = PHP_INT_MAX;
         $lastCity = -1;
+        $candidates = [];
 
         for ($i = 1; $i <= $n; $i++) {
             $dist = $dp[$fullMask][$i];
+            $candidates[] = [
+                'city' => $i,
+                'distance' => $dist == PHP_INT_MAX ? 'INF' : $dist,
+            ];
+            
             if ($dist < $minDist) {
                 $minDist = $dist;
                 $lastCity = $i;
             }
         }
 
+        // STEP 4: Best ending city
+        $dpSteps[] = [
+            'step_type' => 'FIND_BEST_END',
+            'step_number' => count($dpSteps) + 1,
+            'description' => 'Mencari kota akhir terbaik',
+            'full_mask' => $fullMask,
+            'full_mask_binary' => str_pad(decbin($fullMask), $n, '0', STR_PAD_LEFT),
+            'candidates' => $candidates,
+            'best_city' => $lastCity,
+            'best_distance' => $minDist,
+            'timestamp' => microtime(true),
+        ];
+
         // Reconstruct path
         $path = [];
+        $reconstructionSteps = [];
         $mask = $fullMask;
         $current = $lastCity;
 
         while ($current != -1) {
             $path[] = $current;
             $prev = $parent[$mask][$current];
+            
+            $reconstructionSteps[] = [
+                'current_city' => $current,
+                'current_mask' => $mask,
+                'current_mask_binary' => str_pad(decbin($mask), $n, '0', STR_PAD_LEFT),
+                'previous_city' => $prev,
+                'distance_at_state' => $dp[$mask][$current] == PHP_INT_MAX ? 'INF' : $dp[$mask][$current],
+            ];
+            
             if ($prev != -1) {
                 $mask ^= (1 << ($current - 1));
             }
             $current = $prev;
         }
+
+        // STEP 5: Path reconstruction
+        $dpSteps[] = [
+            'step_type' => 'BACKTRACK',
+            'step_number' => count($dpSteps) + 1,
+            'description' => 'Rekonstruksi path optimal dari tabel DP',
+            'reconstruction_steps' => $reconstructionSteps,
+            'final_path' => array_reverse($path),
+            'timestamp' => microtime(true),
+        ];
+
+        // Simpan semua langkah DP ke session
+        session(['dp_steps' => $dpSteps]);
+        
+        // Juga simpan ringkasan untuk akses cepat
+        session(['dp_summary' => [
+            'total_steps' => count($dpSteps),
+            'total_iterations' => $iterationCount,
+            'total_transitions' => $transitionCount,
+            'num_destinations' => $n,
+            'total_states' => 1 << $n,
+            'optimal_distance' => $minDist,
+            'optimal_path' => array_reverse($path),
+            'computation_time' => end($dpSteps)['timestamp'] - $dpSteps[0]['timestamp'],
+        ]]);
 
         return array_reverse($path);
     }
@@ -792,6 +928,16 @@ class ItineraryController extends Controller
         } else {
             $itineraryData['distance_matrix'] = [];
         }
+
+        // Get DP steps from session if available
+        if (session()->has('dp_steps')) {
+            $itineraryData['dp_steps'] = session('dp_steps');
+            $itineraryData['dp_summary'] = session('dp_summary', []);
+        } else {
+            $itineraryData['dp_steps'] = [];
+            $itineraryData['dp_summary'] = [];
+        }
+        
         // dd($itineraryData);
 
         return view('itinerary.result', compact('itineraryData', 'itinerary'));

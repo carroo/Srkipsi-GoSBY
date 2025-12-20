@@ -73,7 +73,7 @@ class TourismController extends Controller
                 'categories' => $categories,
                 'weights' => $weights,
                 'calculations' => $calculations,
-                'sawMode' => true,
+                'sawMode' => false,
             ]),
             'tourisms' => $sortedTourisms,
             'weights' => $weights,

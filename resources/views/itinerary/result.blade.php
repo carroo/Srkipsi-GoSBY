@@ -176,7 +176,7 @@
                     <div class="stats-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
                         <div class="stats-label">Total Destinasi</div>
                         <div class="stats-value">
-                            @if(isset($itineraryData['route']))
+                            @if (isset($itineraryData['route']))
                                 {{ count($itineraryData['route']['route']) }}
                             @else
                                 {{ count($itineraryData['details'] ?? []) }}
@@ -191,7 +191,9 @@
                         <button onclick="openSaveModal()"
                             class="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V5"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V5">
+                                </path>
                             </svg>
                             Simpan Itinerary
                         </button>
@@ -199,14 +201,17 @@
                     <button onclick="shareItinerary()"
                         class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                         </svg>
                         Bagikan
                     </button>
                     <button onclick="openGoogleMapsRoute()"
                         class="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 003 16.382V5.618a1 1 0 011.553-.894L9 7.382v12.618zM15 20l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.553-.894L15 7.382v12.618zM9 7h6"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 20l-5.447-2.724A1 1 0 003 16.382V5.618a1 1 0 011.553-.894L9 7.382v12.618zM15 20l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.553-.894L15 7.382v12.618zM9 7h6">
+                            </path>
                         </svg>
                         Kunjungi di Google Maps
                     </button>
@@ -492,7 +497,7 @@
                             $matrix = $itineraryData['distance_matrix'] ?? [];
                         @endphp
                         <div class="overflow-x-auto">
-                            @if(count($matrix) > 0)
+                            @if (count($matrix) > 0)
                                 <table class="min-w-full border-collapse">
                                     <thead>
                                         <tr>
@@ -538,10 +543,263 @@
                                 </table>
                             @else
                                 <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                    <p class="text-blue-800">Matriks jarak tidak tersedia. Data matriks hanya tersedia setelah generate itinerary baru.</p>
+                                    <p class="text-blue-800">Matriks jarak tidak tersedia. Data matriks hanya tersedia
+                                        setelah generate itinerary baru.</p>
                                 </div>
                             @endif
                         </div>
+                        @if (isset($itineraryData['dp_steps']) && !empty($itineraryData['dp_steps']))
+                            <div class="bg-white rounded-xl shadow-lg p-6 mt-6 animate-fade-in-up">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-2xl font-bold text-gray-900 flex items-center">
+                                        <svg class="w-7 h-7 mr-3 text-indigo-600" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                                        </svg>
+                                        Langkah-langkah Dynamic Programming
+                                    </h3>
+                                    <button onclick="toggleDPSteps()"
+                                        class="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
+                                        <span id="dp-toggle-text">Lihat Detail</span>
+                                        <svg id="dp-toggle-icon" class="w-4 h-4 ml-1 transition-transform" fill="none"
+                                            stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <!-- DP Summary Cards -->
+                                @if (isset($itineraryData['dp_summary']) && !empty($itineraryData['dp_summary']))
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                        <div
+                                            class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+                                            <div class="text-blue-600 text-xs font-semibold uppercase mb-1">Total Iterasi
+                                            </div>
+                                            <div class="text-2xl font-bold text-blue-900">
+                                                {{ number_format($itineraryData['dp_summary']['total_iterations'] ?? 0) }}
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+                                            <div class="text-green-600 text-xs font-semibold uppercase mb-1">Total Transisi
+                                            </div>
+                                            <div class="text-2xl font-bold text-green-900">
+                                                {{ number_format($itineraryData['dp_summary']['total_transitions'] ?? 0) }}
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+                                            <div class="text-purple-600 text-xs font-semibold uppercase mb-1">Total States
+                                            </div>
+                                            <div class="text-2xl font-bold text-purple-900">
+                                                {{ $itineraryData['dp_summary']['total_states'] ?? 0 }}
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200">
+                                            <div class="text-orange-600 text-xs font-semibold uppercase mb-1">Waktu
+                                                Komputasi</div>
+                                            <div class="text-2xl font-bold text-orange-900">
+                                                {{ number_format($itineraryData['dp_summary']['computation_time'] ?? 0, 3) }}s
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Algorithm Explanation -->
+                                    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
+                                        <p class="text-sm text-indigo-900 font-medium mb-2">
+                                            <svg class="inline w-5 h-5 mr-2 text-indigo-600" fill="currentColor"
+                                                viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd"
+                                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                                    clip-rule="evenodd" />
+                                            </svg>
+                                            Tentang Algoritma Held-Karp (Bitmask DP) untuk TSP
+                                        </p>
+                                        <ul class="text-sm text-indigo-800 ml-7 space-y-1 list-disc list-inside">
+                                            <li><strong>State:</strong> dp[mask][i] = jarak minimum mengunjungi lokasi dalam
+                                                mask, berakhir di i</li>
+                                            <li><strong>Bitmask:</strong> Representasi biner untuk tracking lokasi yang
+                                                sudah dikunjungi</li>
+                                            <li><strong>Complexity:</strong> O(2<sup>n</sup> × n²) waktu, O(2<sup>n</sup> ×
+                                                n) space</li>
+                                            <li><strong>Path Optimal:</strong>
+                                                Start →
+                                                @if (isset($itineraryData['dp_summary']['optimal_path']))
+                                                    {{ implode(' → ',array_map(function ($city) {return 'Kota ' . $city;}, $itineraryData['dp_summary']['optimal_path'])) }}
+                                                @endif
+                                            </li>
+                                        </ul>
+                                    </div>
+                                @endif
+
+                                <!-- Detailed Steps Table (Collapsible) -->
+                                <div id="dp-steps-detail" class="hidden">
+                                    <hr class="my-4 border-gray-200">
+
+                                    <h4 class="text-lg font-bold text-gray-800 mb-3">Detail Langkah DP (Tabel)</h4>
+
+                                    <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+                                        <table class="min-w-full border-collapse border border-gray-300">
+                                            <thead class="bg-gray-100 sticky top-0">
+                                                <tr>
+                                                    <th
+                                                        class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
+                                                        #</th>
+                                                    <th
+                                                        class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
+                                                        Tipe</th>
+                                                    <th
+                                                        class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
+                                                        Deskripsi</th>
+                                                    <th
+                                                        class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
+                                                        Detail</th>
+                                                    <th
+                                                        class="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700">
+                                                        Waktu (s)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach ($itineraryData['dp_steps'] as $step)
+                                                    @php
+                                                        $stepColors = [
+                                                            'INIT' => 'bg-blue-50',
+                                                            'BASE_CASE' => 'bg-green-50',
+                                                            'TRANSITION' => 'bg-purple-50',
+                                                            'ITERATION_COMPLETE' => 'bg-yellow-50',
+                                                            'FIND_BEST_END' => 'bg-orange-50',
+                                                            'BACKTRACK' => 'bg-pink-50',
+                                                        ];
+                                                        $stepBadges = [
+                                                            'INIT' => 'bg-blue-500',
+                                                            'BASE_CASE' => 'bg-green-500',
+                                                            'TRANSITION' => 'bg-purple-500',
+                                                            'ITERATION_COMPLETE' => 'bg-yellow-500',
+                                                            'FIND_BEST_END' => 'bg-orange-500',
+                                                            'BACKTRACK' => 'bg-pink-500',
+                                                        ];
+                                                        $bgColor = $stepColors[$step['step_type']] ?? 'bg-gray-50';
+                                                        $badgeColor = $stepBadges[$step['step_type']] ?? 'bg-gray-500';
+                                                        $timestamp = number_format(
+                                                            ($step['timestamp'] ?? 0) -
+                                                                ($itineraryData['dp_steps'][0]['timestamp'] ?? 0),
+                                                            4,
+                                                        );
+                                                    @endphp
+
+                                                    <tr class="{{ $bgColor }}">
+                                                        <td class="border border-gray-300 px-4 py-2 text-center">
+                                                            <span
+                                                                class="{{ $badgeColor }} text-white text-xs font-bold px-2 py-1 rounded">
+                                                                {{ $step['step_number'] }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="border border-gray-300 px-4 py-2">
+                                                            <span
+                                                                class="font-semibold text-sm">{{ $step['step_type'] }}</span>
+                                                        </td>
+                                                        <td class="border border-gray-300 px-4 py-2 text-sm">
+                                                            {{ $step['description'] ?? '-' }}
+                                                        </td>
+                                                        <td class="border border-gray-300 px-4 py-2 text-xs">
+                                                            {{-- INIT Details --}}
+                                                            @if ($step['step_type'] === 'INIT')
+                                                                Total States: {{ $step['total_states'] ?? 0 }}
+
+                                                                {{-- BASE_CASE Details --}}
+                                                            @elseif($step['step_type'] === 'BASE_CASE' && isset($step['base_cases']))
+                                                                <div class="space-y-1">
+                                                                    @foreach ($step['base_cases'] as $base)
+                                                                        <div>Kota {{ $base['destination'] }}: <code
+                                                                                class="bg-gray-200 px-1">{{ $base['mask_binary'] }}</code>
+                                                                            = {{ number_format($base['distance']) }}m</div>
+                                                                    @endforeach
+                                                                </div>
+
+                                                                {{-- TRANSITION Details --}}
+                                                            @elseif($step['step_type'] === 'TRANSITION' && isset($step['state']))
+                                                                <div>
+                                                                    <strong>Mask:</strong> <code
+                                                                        class="bg-gray-200 px-1">{{ $step['state']['mask_binary'] }}</code><br>
+                                                                    <strong>Last City:</strong>
+                                                                    {{ $step['state']['last_city'] }}<br>
+                                                                    <strong>Distance:</strong>
+                                                                    {{ number_format($step['state']['current_distance']) }}m<br>
+                                                                    <strong>Transitions:</strong>
+                                                                    {{ count($step['state']['transitions']) }}
+                                                                </div>
+
+                                                                {{-- ITERATION_COMPLETE Details --}}
+                                                            @elseif($step['step_type'] === 'ITERATION_COMPLETE')
+                                                                <div>
+                                                                    Iterasi:
+                                                                    {{ number_format($step['total_iterations']) }}<br>
+                                                                    Transisi:
+                                                                    {{ number_format($step['total_transitions']) }}
+                                                                </div>
+
+                                                                {{-- FIND_BEST_END Details --}}
+                                                            @elseif($step['step_type'] === 'FIND_BEST_END')
+                                                                <div>
+                                                                    <strong>Full Mask:</strong> <code
+                                                                        class="bg-gray-200 px-1">{{ $step['full_mask_binary'] ?? '' }}</code><br>
+                                                                    <strong>Best City:</strong>
+                                                                    {{ $step['best_city'] ?? '-' }}<br>
+                                                                    <strong>Best Distance:</strong>
+                                                                    {{ number_format($step['best_distance'] ?? 0) }}m
+                                                                </div>
+
+                                                                {{-- BACKTRACK Details --}}
+                                                            @elseif($step['step_type'] === 'BACKTRACK' && isset($step['final_path']))
+                                                                <div>
+                                                                    <strong>Final Path:</strong><br>
+                                                                    Start →
+                                                                    {{ implode(' → ',array_map(function ($city) {return 'Kota ' . $city;}, $step['final_path'])) }}
+                                                                </div>
+                                                            @endif
+                                                        </td>
+                                                        <td class="border border-gray-300 px-4 py-2 text-right text-sm">
+                                                            {{ $timestamp }}
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                        <p class="text-sm text-blue-800">
+                                            <strong>Keterangan:</strong> Tabel di atas menampilkan setiap langkah algoritma
+                                            Dynamic Programming
+                                            dalam menyelesaikan Traveling Salesman Problem (TSP). Setiap baris
+                                            merepresentasikan satu iterasi
+                                            atau event dalam proses komputasi untuk menemukan rute optimal.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <script>
+                                function toggleDPSteps() {
+                                    const detail = document.getElementById('dp-steps-detail');
+                                    const toggleText = document.getElementById('dp-toggle-text');
+                                    const toggleIcon = document.getElementById('dp-toggle-icon');
+
+                                    if (detail.classList.contains('hidden')) {
+                                        detail.classList.remove('hidden');
+                                        toggleText.textContent = 'Sembunyikan Detail';
+                                        toggleIcon.style.transform = 'rotate(180deg)';
+                                    } else {
+                                        detail.classList.add('hidden');
+                                        toggleText.textContent = 'Lihat Detail';
+                                        toggleIcon.style.transform = 'rotate(0deg)';
+                                    }
+                                }
+                            </script>
+                        @endif
                     </div>
 
                     <!-- Summary Tab -->
@@ -596,11 +854,13 @@
                 </div>
             </div>
 
+
         </div>
     </section>
 
     <!-- Save Modal -->
-    <div id="saveModal" class="fixed inset-0 bg-black/30 hidden z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div id="saveModal"
+        class="fixed inset-0 bg-black/30 hidden z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
             <!-- Modal Header -->
             <div class="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-4 rounded-t-xl">
@@ -608,7 +868,8 @@
                     <h3 class="text-xl font-bold text-white">Simpan Itinerary</h3>
                     <button onclick="closeSaveModal()" class="text-white hover:text-gray-200">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
                 </div>
@@ -624,7 +885,8 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Tanggal Perjalanan:</span>
-                        <span class="font-semibold text-gray-900">{{ \Carbon\Carbon::parse($itineraryData['travel_date'])->format('d M Y') }}</span>
+                        <span
+                            class="font-semibold text-gray-900">{{ \Carbon\Carbon::parse($itineraryData['travel_date'])->format('d M Y') }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Waktu Mulai:</span>
@@ -636,7 +898,9 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Total Jarak:</span>
-                        <span class="font-semibold text-gray-900">{{ number_format($itineraryData['total_distance'] / 1000, 1) }} km</span>
+                        <span
+                            class="font-semibold text-gray-900">{{ number_format($itineraryData['total_distance'] / 1000, 1) }}
+                            km</span>
                     </div>
                 </div>
 
@@ -644,11 +908,14 @@
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <div class="flex items-start gap-2">
                         <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd"></path>
                         </svg>
                         <div class="text-sm text-blue-800">
                             <p class="font-semibold">Tips:</p>
-                            <p class="mt-1">Silahkan sesuaikan durasi berkunjung di setiap destinasi sebelum menyimpan ke database.</p>
+                            <p class="mt-1">Silahkan sesuaikan durasi berkunjung di setiap destinasi sebelum menyimpan ke
+                                database.</p>
                         </div>
                     </div>
                 </div>
@@ -663,7 +930,9 @@
                 <button onclick="saveItinerary()"
                     class="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V5"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V5">
+                        </path>
                     </svg>
                     Simpan
                 </button>
@@ -958,19 +1227,20 @@
         // ============================================
         function shareItinerary() {
             const itineraryData = {!! json_encode($itineraryData) !!};
-            
+
             // Get current URL or construct it
             const shareUrl = window.location.href;
-            
+
             try {
                 // Try to copy to clipboard using the modern API
                 navigator.clipboard.writeText(shareUrl).then(function() {
                     // Show success message
                     const message = document.createElement('div');
-                    message.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse';
+                    message.className =
+                        'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse';
                     message.textContent = '✓ Link berhasil disalin ke clipboard!';
                     document.body.appendChild(message);
-                    
+
                     // Remove message after 3 seconds
                     setTimeout(() => {
                         message.remove();
@@ -984,7 +1254,7 @@
                 fallbackCopyToClipboard(shareUrl);
             }
         }
-        
+
         // Fallback function for older browsers
         function fallbackCopyToClipboard(text) {
             const textArea = document.createElement('textarea');
@@ -993,21 +1263,22 @@
             textArea.style.left = '-999999px';
             document.body.appendChild(textArea);
             textArea.select();
-            
+
             try {
                 document.execCommand('copy');
                 const message = document.createElement('div');
-                message.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse';
+                message.className =
+                    'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse';
                 message.textContent = '✓ Link berhasil disalin ke clipboard!';
                 document.body.appendChild(message);
-                
+
                 setTimeout(() => {
                     message.remove();
                 }, 3000);
             } catch (err) {
                 alert('❌ Gagal menyalin link ke clipboard');
             }
-            
+
             document.body.removeChild(textArea);
         }
 
@@ -1016,15 +1287,15 @@
         // ============================================
         function openGoogleMapsRoute() {
             const itineraryData = {!! json_encode($itineraryData) !!};
-            
+
             // Get all coordinates from the route
             const coordinates = [];
-            
+
             // Add start point
             if (itineraryData.start_point) {
                 coordinates.push(`${itineraryData.start_point.lat},${itineraryData.start_point.long}`);
             }
-            
+
             // Add all destinations
             if (itineraryData.route && itineraryData.route.route) {
                 itineraryData.route.route.forEach(stop => {
@@ -1033,17 +1304,17 @@
                     }
                 });
             }
-            
+
             if (coordinates.length < 2) {
                 alert('❌ Koordinat tidak cukup untuk membuka Google Maps');
                 return;
             }
-            
+
             // Build Google Maps URL
             const googleMapsUrl = `https://www.google.com/maps/dir/${coordinates.join('/')}`;
-            
+
             console.log('🗺️ Google Maps URL:', googleMapsUrl);
-            
+
             // Open in new tab
             window.open(googleMapsUrl, '_blank');
         }
@@ -1053,13 +1324,13 @@
         // ============================================
         function openSaveModal() {
             const itineraryData = {!! json_encode($itineraryData) !!};
-            
+
             // Check if user is owner
             if (!itineraryData.is_owner) {
                 alert('❌ Hanya pemilik itinerary yang dapat mengedit');
                 return;
             }
-            
+
             const startTime = document.getElementById('start_time').value;
             document.getElementById('modalStartTime').textContent = startTime;
             document.getElementById('saveModal').classList.remove('hidden');
@@ -1112,14 +1383,14 @@
                         order: tourism.order,
                         stay_duration: stayDurationInput ? parseInt(stayDurationInput.value) || 0 : 0,
                     };
-                    
+
                     // Hanya include detail jika punya tourism_id atau bukan start point
                     // Jika start point adalah custom (tanpa tourism), skip order 0
                     if (tourism.order === 0 && itineraryData.start_point.type === 'custom') {
                         // Skip order 0 ketika start point custom
                         return;
                     }
-                    
+
                     details.push(detail);
                 }
             });
@@ -1135,47 +1406,47 @@
             console.log('📦 Payload yang akan dikirim:', payload);
 
             // Send to server
-            fetch('{{ route("itinerary.save") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify(payload)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('✓ Response:', data);
-
-                if (data.success) {
-                    // Show success message
-                    closeSaveModal();
-                    alert('✓ Itinerary berhasil disimpan!');
-
-                    // Redirect to itinerary detail page
-                    if (data.redirect_url) {
-                        setTimeout(() => {
-                            window.location.href = data.redirect_url;
-                        }, 500);
+            fetch('{{ route('itinerary.save') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                } else {
-                    alert('❌ Gagal menyimpan: ' + (data.message || 'Unknown error'));
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('✓ Response:', data);
+
+                    if (data.success) {
+                        // Show success message
+                        closeSaveModal();
+                        alert('✓ Itinerary berhasil disimpan!');
+
+                        // Redirect to itinerary detail page
+                        if (data.redirect_url) {
+                            setTimeout(() => {
+                                window.location.href = data.redirect_url;
+                            }, 500);
+                        }
+                    } else {
+                        alert('❌ Gagal menyimpan: ' + (data.message || 'Unknown error'));
+                        saveButton.disabled = false;
+                        saveButton.innerHTML = originalHTML;
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error:', error);
+                    alert('❌ Terjadi kesalahan saat menyimpan: ' + error.message);
                     saveButton.disabled = false;
                     saveButton.innerHTML = originalHTML;
-                }
-            })
-            .catch(error => {
-                console.error('❌ Error:', error);
-                alert('❌ Terjadi kesalahan saat menyimpan: ' + error.message);
-                saveButton.disabled = false;
-                saveButton.innerHTML = originalHTML;
-            });
+                });
         }
 
         // ============================================

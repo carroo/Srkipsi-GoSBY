@@ -51,4 +51,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(TripCart::class);
     }
+
+    /**
+     * Get the itineraries for this user.
+     */
+    public function itineraries()
+    {
+        return $this->hasMany(Itinerary::class);
+    }
 }

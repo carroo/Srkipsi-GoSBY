@@ -80,88 +80,9 @@
     <!-- Main Content Section -->
     <section class="py-6 bg-gray-50 min-h-screen">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex gap-6">
-                <!-- Left Side: Tourism Cards (2/3) -->
-                <div class="flex-1" style="flex: 0 0 66.666667%;">
-                    <!-- Filter Section -->
-                    <div class="bg-white rounded-xl shadow-md p-4 mb-6">
-                        <div class="flex items-center gap-4">
-                            <!-- Search -->
-                            <div class="flex-1">
-                                <div class="relative">
-                                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                    </svg>
-                                    <input type="text" id="searchInput" placeholder="Cari wisata atau lokasi..."
-                                        value="{{ request('search') }}"
-                                        class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                </div>
-                            </div>
-
-                            <!-- Category Filter -->
-                            <div style="min-width: 200px;">
-                                <select id="categoryFilter"
-                                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                    <option value="">Semua Kategori</option>
-                                    @foreach ($categories as $category)
-                                        <option value="{{ $category->id }}"
-                                            {{ request('category') == $category->id ? 'selected' : '' }}>
-                                            {{ $category->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Results Info -->
-                    <div class="bg-blue-50 border-l-4 border-blue-600 p-4 mb-6 rounded-r-lg">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center">
-                                <svg class="w-6 h-6 text-blue-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path
-                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z">
-                                    </path>
-                                </svg>
-                                <div>
-                                    <p class="font-bold text-blue-900">Hasil Rekomendasi SAW</p>
-                                    <p class="text-sm text-blue-700">
-                                        <span id="showingCount">12</span> dari <span
-                                            id="totalCount">{{ $tourisms->count() }}</span> wisata
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <button onclick="showSAWCalculation()"
-                                    class="inline-flex items-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 transform hover:scale-105">
-                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z">
-                                        </path>
-                                    </svg>
-                                    Lihat Perhitungan
-                                </button>
-                                @if (request('search') || request('category'))
-                                    <button onclick="resetFilters()"
-                                        class="text-blue-600 hover:text-blue-800 font-semibold text-sm">
-                                        Reset Filter
-                                    </button>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tourism Cards Container -->
-                    <div id="tourismCardsContainer">
-                       
-                    </div>
-                </div>
-
-                <!-- Right Side: SAW Criteria Form (1/3) -->
-                <div class="flex-shrink-0" style="width: 33.333333%;">
-                    <div class="sticky top-6">
+            <div class="flex flex-col md:flex-row gap-6 justify-center">
+                <div class="w-full md:w-1/3">
+                    <div class="md:sticky md:top-6">
                         <form id="sawForm" method="GET" action="{{ route('tourism.index') }}"
                             class="bg-white rounded-xl shadow-lg p-6">
                             @csrf
@@ -428,6 +349,82 @@
                                 ⚠️ Total harus 100%
                             </div>
                         </form>
+                    </div>
+                </div>
+                <div class="w-full md:w-2/3 hidden" id="resultsSection">
+                    <!-- Filter Section -->
+                    <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+                        <div class="flex items-center gap-4">
+                            <!-- Search -->
+                            <div class="flex-1">
+                                <div class="relative">
+                                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                    <input type="text" id="searchInput" placeholder="Cari wisata atau lokasi..."
+                                        value="{{ request('search') }}"
+                                        class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                </div>
+                            </div>
+
+                            <!-- Category Filter -->
+                            <div style="min-width: 200px;">
+                                <select id="categoryFilter"
+                                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="">Semua Kategori</option>
+                                    @foreach ($categories as $category)
+                                        <option value="{{ $category->id }}"
+                                            {{ request('category') == $category->id ? 'selected' : '' }}>
+                                            {{ $category->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Info -->
+                    <div class="bg-blue-50 border-l-4 border-blue-600 p-4 mb-6 rounded-r-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <svg class="w-6 h-6 text-blue-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z">
+                                    </path>
+                                </svg>
+                                <div>
+                                    <p class="font-bold text-blue-900">Hasil Rekomendasi SAW</p>
+                                    <p class="text-sm text-blue-700">
+                                        <span id="showingCount">12</span> dari <span
+                                            id="totalCount">{{ $tourisms->count() }}</span> wisata
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button onclick="showSAWCalculation()"
+                                    class="inline-flex items-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 transform hover:scale-105">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                                        </path>
+                                    </svg>
+                                    Lihat Perhitungan
+                                </button>
+                                @if (request('search') || request('category'))
+                                    <button onclick="resetFilters()"
+                                        class="text-blue-600 hover:text-blue-800 font-semibold text-sm">
+                                        Reset Filter
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tourism Cards Container -->
+                    <div id="tourismCardsContainer">
+
                     </div>
                 </div>
             </div>
@@ -832,7 +829,7 @@
                 document.querySelectorAll('.criteria-item').forEach(item => {
                     const label = item.querySelector('.weight-label-text');
                     const input = item.querySelector('.weight-input-field');
-                    if (label) label.classList.remove('hidden');
+                    if (label) label.classList.add('hidden');
                     if (input) input.classList.add('hidden');
                 });
 
@@ -1300,6 +1297,7 @@
                 complete: function() {
                     isLoading = false;
                     loadingOverlay.style.display = 'none';
+                    $('#resultsSection').removeClass('hidden');
                 }
             });
         }
@@ -1461,7 +1459,7 @@
         $(document).ready(function() {
             // Use event delegation for dynamically loaded content
             // $(document).on('click', '.add-to-trip-cart', handleAddToTripCart);
-            applyFilters(); // Initial load with filters applied
+            // applyFilters(); // Initial load with filters applied
         });
 
         function handleAddToTripCart(e) {
@@ -1491,13 +1489,13 @@
                         // Change button to "Already in Cart" state permanently
                         $button.removeClass(
                                 'add-to-trip-cart from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700'
-                                )
+                            )
                             .addClass('from-gray-400 to-gray-500 cursor-not-allowed');
 
                         // Change icon to checkmark
                         $icon.html(
                             '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>'
-                            );
+                        );
 
                         // Change text
                         $buttonText.text('Sudah di Trip');

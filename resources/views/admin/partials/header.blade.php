@@ -17,55 +17,6 @@
         <!-- Right: Actions & Profile -->
         <div class="flex items-center space-x-3">
 
-            <!-- Notifications -->
-            <div class="relative">
-                <button onclick="toggleNotifications()"
-                        class="relative flex items-center justify-center w-10 h-10 rounded-lg text-gray-500 hover:bg-gray-100">
-                    <i class="fas fa-bell text-lg"></i>
-                    <span class="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-semibold">3</span>
-                </button>
-
-                <!-- Notifications Dropdown -->
-                <div id="notificationsDropdown"
-                     class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 hidden">
-                    <div class="px-4 py-3 border-b border-gray-200">
-                        <h3 class="text-sm font-semibold text-gray-900">Notifikasi</h3>
-                    </div>
-                    <div class="max-h-96 overflow-y-auto">
-                        <a href="#" class="flex items-start px-4 py-3 hover:bg-gray-50 transition">
-                            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                <i class="fas fa-user text-blue-600"></i>
-                            </div>
-                            <div class="ml-3 flex-1">
-                                <p class="text-sm text-gray-900">User baru mendaftar</p>
-                                <p class="text-xs text-gray-500 mt-1">2 menit yang lalu</p>
-                            </div>
-                        </a>
-                        <a href="#" class="flex items-start px-4 py-3 hover:bg-gray-50 transition">
-                            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                                <i class="fas fa-ticket-alt text-green-600"></i>
-                            </div>
-                            <div class="ml-3 flex-1">
-                                <p class="text-sm text-gray-900">Pemesanan baru masuk</p>
-                                <p class="text-xs text-gray-500 mt-1">15 menit yang lalu</p>
-                            </div>
-                        </a>
-                        <a href="#" class="flex items-start px-4 py-3 hover:bg-gray-50 transition">
-                            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                                <i class="fas fa-star text-yellow-600"></i>
-                            </div>
-                            <div class="ml-3 flex-1">
-                                <p class="text-sm text-gray-900">Review baru untuk wisata</p>
-                                <p class="text-xs text-gray-500 mt-1">1 jam yang lalu</p>
-                            </div>
-                        </a>
-                    </div>
-                    <div class="px-4 py-3 border-t border-gray-200">
-                        <a href="#" class="text-sm text-blue-600 hover:text-blue-700 font-medium">Lihat semua notifikasi</a>
-                    </div>
-                </div>
-            </div>
-
             <!-- Profile Dropdown -->
             <div class="relative">
                 <button onclick="toggleProfileMenu()"
@@ -87,15 +38,6 @@
                         <p class="text-sm font-medium text-gray-900">{{ Auth::guard('admin')->user()->name }}</p>
                         <p class="text-xs text-gray-500 mt-1">{{ Auth::guard('admin')->user()->email }}</p>
                     </div>
-                    <a href="{{ route('admin.profile') }}" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition">
-                        <i class="fas fa-user w-5 text-gray-400"></i>
-                        <span class="ml-3">Profil Saya</span>
-                    </a>
-                    <a href="{{ route('admin.settings') }}" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition">
-                        <i class="fas fa-cog w-5 text-gray-400"></i>
-                        <span class="ml-3">Pengaturan</span>
-                    </a>
-                    <div class="border-t border-gray-200 my-2"></div>
                     <form method="POST" action="{{ route('admin.logout') }}">
                         @csrf
                         <button type="submit" class="w-full flex items-center px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition">

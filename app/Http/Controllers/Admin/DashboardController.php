@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Tourism;
 use App\Models\Category;
 use App\Models\User;
-use App\Models\TripCart;
+use App\Models\Itinerary;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -19,13 +19,13 @@ class DashboardController extends Controller
         $totalTourism = Tourism::count();
         $totalCategories = Category::count();
         $totalUsers = User::count();
-        $totalBookings = TripCart::count();
+        $totalItineraries = Itinerary::count();
 
         return view('admin.dashboard', compact(
             'totalTourism',
             'totalCategories',
             'totalUsers',
-            'totalBookings'
+            'totalItineraries'
         ));
     }
 }

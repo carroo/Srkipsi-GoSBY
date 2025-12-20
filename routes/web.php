@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\TourismController as AdminTourismController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\DistanceMatrixController;
 use App\Http\Controllers\Admin\ItineraryController as AdminItineraryController;
 
@@ -28,6 +29,7 @@ Route::post('/register', [RegisterController::class, 'register']);
 
 // Authentication Routes - Admin
 Route::get('/admin/login', [LoginController::class, 'showAdminLoginForm'])->name('admin.login');
+Route::get('/admin', [LoginController::class, 'showAdminLoginForm'])->name('admin.login.redirect');
 Route::post('/admin/login', [LoginController::class, 'adminLogin'])->name('admin.login.submit');
 Route::post('/admin/logout', [LoginController::class, 'adminLogout'])->name('admin.logout');
 
@@ -67,6 +69,13 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
     Route::put('/categories/{id}', [CategoryController::class, 'update'])->name('categories.update');
     Route::delete('/categories/{id}', [CategoryController::class, 'destroy'])->name('categories.destroy');
 
+    // Users Management
+    Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+    Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
+    Route::get('/users/{id}', [AdminUserController::class, 'show'])->name('users.show');
+    Route::put('/users/{id}', [AdminUserController::class, 'update'])->name('users.update');
+    Route::delete('/users/{id}', [AdminUserController::class, 'destroy'])->name('users.destroy');
+
     // Distance Matrix
     Route::get('/distance-matrix', [DistanceMatrixController::class, 'index'])->name('distance-matrix.index');
     Route::get('/distance-matrix/data', [DistanceMatrixController::class, 'getDistanceData'])->name('distance-matrix.data');
@@ -75,9 +84,4 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
     Route::get('/itinerary', [AdminItineraryController::class, 'index'])->name('itinerary.index');
     Route::delete('/itinerary/{id}', [AdminItineraryController::class, 'destroy'])->name('itinerary.destroy');
 
-    // Placeholder routes for sidebar menu (will be implemented later)
-    Route::get('/users', function() { return 'Users Management'; })->name('users.index');
-    Route::get('/bookings', function() { return 'Bookings Management'; })->name('bookings.index');
-    Route::get('/settings', function() { return 'Settings'; })->name('settings');
-    Route::get('/profile', function() { return 'Profile'; })->name('profile');
 });
