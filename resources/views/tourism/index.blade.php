@@ -343,6 +343,17 @@
                                 Reset ke Default
                             </button>
 
+                            {{-- lanjut ke penjadwalan --}}
+                            <a href="{{ route('itinerary.create') }}"
+                                class="w-full mt-3 block text-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform hover:scale-105 transition duration-300">
+                                <svg class="w-5 h-5 mr-2 inline-block" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                                Lanjut ke Penjadwalan
+                            </a>
                             <!-- Warning for Advanced Mode -->
                             <div id="advancedWarning" class="mt-3 text-center text-xs text-red-600 font-semibold"
                                 style="display: none;">

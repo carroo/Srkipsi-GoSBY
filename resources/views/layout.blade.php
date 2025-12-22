@@ -28,7 +28,7 @@
                 <div class="flex items-center space-x-2 sm:space-x-3">
                     <!-- Rekomendasikan Button -->
                     <a href="{{ route('tourism.index') }}"
-                        class="relative flex items-center space-x-2 px-3 sm:px-4 py-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-600 rounded-lg transition duration-300 group">
+                        class="hidden sm:flex items-center space-x-2 px-3 sm:px-4 py-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-600 rounded-lg transition duration-300 group">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z">
@@ -127,7 +127,7 @@
                 </a>
 
                 <!-- Jadwalkan Button -->
-                <a href="#"
+                <a href="{{ route('itinerary.create') }}"
                     class="flex items-center px-4 py-3 text-white bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-lg font-semibold transition duration-300">
                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
