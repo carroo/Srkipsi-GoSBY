@@ -16,7 +16,7 @@
 
 <body class="bg-gray-50 text-gray-900 antialiased">
     <!-- Navigation -->
-    <nav class="bg-white/95 backdrop-blur-md border-b border-gray-100 top-0 z-50 shadow-sm">
+    <nav class="bg-white/95 backdrop-blur-md border-b border-gray-100 top-0 shadow-sm sticky" style="z-index: 100;">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <!-- Logo (Left) -->
@@ -63,7 +63,7 @@
                                 </svg>
                             </button>
                             <div id="userDropdown"
-                                class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-100">
+                                class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 border border-gray-100" style="z-index: 101;">
                                 <a href="{{ route('itinerary.list') }}"
                                     class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 transition duration-200">
                                     <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -183,18 +183,36 @@
     <script>
         // Wait for DOM to be fully loaded
         document.addEventListener('DOMContentLoaded', function() {
+            initializeNavigation();
+        });
+
+        // Also initialize on page load (for cases where DOMContentLoaded already fired)
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            setTimeout(initializeNavigation, 1);
+        }
+
+        function initializeNavigation() {
             // Mobile menu toggle
             const mobileMenuBtn = document.getElementById('mobile-menu-btn');
             if (mobileMenuBtn) {
-                mobileMenuBtn.addEventListener('click', function() {
+                // Remove existing listeners to prevent duplicates
+                const newMobileMenuBtn = mobileMenuBtn.cloneNode(true);
+                mobileMenuBtn.parentNode.replaceChild(newMobileMenuBtn, mobileMenuBtn);
+                
+                newMobileMenuBtn.addEventListener('click', function() {
                     const menu = document.getElementById('mobile-menu');
-                    menu.classList.toggle('hidden');
+                    if (menu) {
+                        menu.classList.toggle('hidden');
+                    }
                 });
 
                 // Close mobile menu when clicking on links
                 document.querySelectorAll('#mobile-menu a').forEach(link => {
                     link.addEventListener('click', function() {
-                        document.getElementById('mobile-menu').classList.add('hidden');
+                        const menu = document.getElementById('mobile-menu');
+                        if (menu) {
+                            menu.classList.add('hidden');
+                        }
                     });
                 });
             }
@@ -203,25 +221,31 @@
             const userMenuButton = document.getElementById('userMenuButton');
             const userDropdown = document.getElementById('userDropdown');
 
-            console.log('userMenuButton:', userMenuButton); // Debug log
-            console.log('userDropdown:', userDropdown); // Debug log
-
             if (userMenuButton && userDropdown) {
-                userMenuButton.addEventListener('click', function(e) {
+                // Remove existing listeners to prevent duplicates
+                const newUserMenuButton = userMenuButton.cloneNode(true);
+                userMenuButton.parentNode.replaceChild(newUserMenuButton, userMenuButton);
+                
+                newUserMenuButton.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('Button clicked!'); // Debug log
-                    userDropdown.classList.toggle('hidden');
+                    const dropdown = document.getElementById('userDropdown');
+                    if (dropdown) {
+                        dropdown.classList.toggle('hidden');
+                    }
                 });
 
                 // Close dropdown when clicking outside
                 document.addEventListener('click', function(e) {
-                    if (!userMenuButton.contains(e.target) && !userDropdown.contains(e.target)) {
-                        userDropdown.classList.add('hidden');
+                    const button = document.getElementById('userMenuButton');
+                    const dropdown = document.getElementById('userDropdown');
+                    
+                    if (button && dropdown && !button.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.add('hidden');
                     }
                 });
             }
-        });
+        }
     </script>
 
     <!-- Main Content -->

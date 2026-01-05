@@ -12,8 +12,14 @@
     }
 
     .distance-matrix-wrapper {
+        overflow-x: auto;
+        overflow-y: hidden;
         scrollbar-width: thin;
         scrollbar-color: #cbd5e1 #f1f5f9;
+        -webkit-overflow-scrolling: touch;
+        display: block;
+        width: 100%;
+        min-width: 0;
     }
 
     .distance-matrix-wrapper::-webkit-scrollbar {
@@ -32,6 +38,21 @@
 
     .distance-matrix-wrapper::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
+    }
+
+    /* Ensure table doesn't expand beyond scroll container */
+    .distance-matrix-wrapper table {
+        width: auto !important;
+        table-layout: auto;
+        border-collapse: collapse;
+    }
+
+    /* Fix sticky column styling */
+    .distance-matrix-wrapper th:first-child,
+    .distance-matrix-wrapper td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 10;
     }
 </style>
 @endpush
@@ -63,20 +84,22 @@
     </div>
 
     <!-- Distance Matrix Table -->
-    <div class="bg-white rounded-lg p-6 shadow-sm overflow-visible">
-        <div class="flex justify-between items-center mb-6 pb-4 border-b-2 border-slate-200">
-            <h2 class="text-xl font-semibold text-slate-800">Matriks Jarak (meter)</h2>
-            <div class="text-sm text-slate-600">
-                Total Lokasi: <strong>{{ count($tourisms) }}</strong>
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden max-w-full w-full" style="min-width: 0;">
+        <div class="px-6 pt-6 pb-4 border-b-2 border-slate-200">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-slate-800">Matriks Jarak (meter)</h2>
+                <div class="text-sm text-slate-600">
+                    Total Lokasi: <strong>{{ count($tourisms) }}</strong>
+                </div>
             </div>
         </div>
-        <div class="distance-matrix-wrapper overflow-x-auto border border-slate-200 rounded-lg">
-            <table class="w-full border-collapse">
+        <div class="distance-matrix-wrapper">
+            <table class="border-collapse">
                 <thead>
                     <tr class="bg-gradient-to-r from-indigo-600 to-purple-600">
-                        <th class="sticky left-0 z-10 bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3 text-left font-semibold text-sm text-white border border-white border-opacity-20 ">ID</th>
+                        <th class="sticky left-0 z-10 bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3 text-left font-semibold text-sm text-white border border-white border-opacity-20">ID</th>
                         @foreach($tourisms as $to)
-                            <th class="px-4 py-3 text-center font-semibold text-sm text-white border border-white border-opacity-20" style="width: 140px; min-width: 140px;">
+                            <th class="px-4 py-3 text-center font-semibold text-sm text-white border border-white border-opacity-20 whitespace-nowrap" style="width: 140px; min-width: 140px;">
                                 <div class="relative inline-block group">
                                     <span class="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-full font-semibold text-xs cursor-help hover:scale-110 transition-transform duration-200 hover:shadow-lg hover:shadow-indigo-400/40">
                                         {{ $to->id }}
@@ -95,7 +118,7 @@
                 <tbody>
                     @foreach($tourisms as $from)
                         <tr class="even:bg-slate-50 hover:bg-blue-50 transition-colors duration-200">
-                            <td class="sticky left-0 z-10 px-4 py-3 border border-slate-200 font-semibold text-slate-900 whitespace-nowrap  bg-white even:bg-slate-50 hover:bg-blue-50">
+                            <td class="sticky left-0 z-10 px-4 py-3 border border-slate-200 font-semibold text-slate-900 whitespace-nowrap bg-white even:bg-slate-50 hover:bg-blue-50">
                                 <div class="relative inline-block group">
                                     <span class="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-full font-semibold text-xs cursor-help hover:scale-110 transition-transform duration-200 hover:shadow-lg hover:shadow-indigo-400/40">
                                         {{ $from->id }}
@@ -109,7 +132,7 @@
                                 </div>
                             </td>
                             @foreach($matrix[$from->id] as $distance)
-                                <td class="px-4 py-3 border border-slate-200 text-center text-sm">
+                                <td class="px-4 py-3 border border-slate-200 text-center text-sm whitespace-nowrap" style="width: 140px; min-width: 140px;">
                                     @if($distance['distance'] !== null)
                                         <div class="text-slate-600 font-medium">{{ number_format($distance['distance']) }} m</div>
                                         <div class="text-xs text-slate-400">
@@ -125,6 +148,7 @@
                 </tbody>
             </table>
         </div>
+        <div class="px-6 pb-6"></div>
     </div>
 </div>
 @endsection

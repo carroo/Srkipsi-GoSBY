@@ -182,10 +182,14 @@
             const profileDropdown = document.getElementById('profileDropdown');
             
             // Close profile dropdown if open
-            profileDropdown.classList.add('hidden');
+            if (profileDropdown) {
+                profileDropdown.classList.add('hidden');
+            }
             
             // Toggle notifications dropdown
-            dropdown.classList.toggle('hidden');
+            if (dropdown) {
+                dropdown.classList.toggle('hidden');
+            }
         };
 
         // Toggle profile menu dropdown
@@ -194,10 +198,14 @@
             const notificationsDropdown = document.getElementById('notificationsDropdown');
             
             // Close notifications dropdown if open
-            notificationsDropdown.classList.add('hidden');
+            if (notificationsDropdown) {
+                notificationsDropdown.classList.add('hidden');
+            }
             
             // Toggle profile dropdown
-            dropdown.classList.toggle('hidden');
+            if (dropdown) {
+                dropdown.classList.toggle('hidden');
+            }
         };
 
         // Close dropdowns when clicking outside

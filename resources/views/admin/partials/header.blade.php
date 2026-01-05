@@ -7,11 +7,6 @@
                     class="lg:hidden text-gray-500 hover:text-gray-700 focus:outline-none">
                 <i class="fas fa-bars text-xl"></i>
             </button>
-
-            <!-- Page Title (Hidden on mobile) -->
-            <div class="hidden lg:block">
-                <h1 class="text-xl font-semibold text-gray-800">@yield('page-title', 'Dashboard')</h1>
-            </div>
         </div>
 
         <!-- Right: Actions & Profile -->

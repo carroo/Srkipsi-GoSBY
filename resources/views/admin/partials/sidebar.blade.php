@@ -4,9 +4,8 @@
     <div class="h-16 flex items-center justify-center border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600">
         <div class="flex items-center space-x-2">
             <div class="bg-white rounded-lg p-2">
-                <i class="fas fa-plane-departure text-blue-600 text-xl"></i>
+                <img src="{{ asset('img/logo.png') }}" class="h-8" alt="">
             </div>
-            <span class="text-white text-xl font-bold">GoSBY</span>
         </div>
     </div>
 
@@ -38,11 +37,11 @@
         </a>
 
         <!-- Distance Matrix -->
-        <a href="{{ route('admin.distance-matrix.index') }}"
+        {{-- <a href="{{ route('admin.distance-matrix.index') }}"
            class="sidebar-link flex items-center px-4 py-3 mb-1 rounded-lg {{ request()->routeIs('admin.distance-matrix.*') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50' }}">
             <i class="fas fa-table w-5 {{ request()->routeIs('admin.distance-matrix.*') ? 'text-blue-600' : 'text-gray-400' }}"></i>
             <span class="ml-3 font-medium">Matriks Jarak</span>
-        </a>
+        </a> --}}
 
         <!-- Itinerary -->
         <a href="{{ route('admin.itinerary.index') }}"

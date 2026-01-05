@@ -41,6 +41,33 @@
             height: 600px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Override Leaflet default z-index to prevent overlap with navbar */
+        .leaflet-pane,
+        .leaflet-top,
+        .leaflet-bottom {
+            z-index: 10 !important;
+        }
+
+        .leaflet-control {
+            z-index: 20 !important;
+        }
+
+        .leaflet-popup-pane {
+            z-index: 30 !important;
+        }
+
+        .leaflet-tooltip-pane {
+            z-index: 25 !important;
+        }
+
+        /* Ensure map container doesn't overlap navbar (navbar is z-index: 100) */
+        .map-wrapper {
+            position: relative;
+            z-index: 1;
         }
 
         /* Polyline Styling */
@@ -260,7 +287,9 @@
                 <div class="p-6">
                     <!-- Map Tab -->
                     <div id="map-tab" class="tab-pane active">
-                        <div id="map"></div>
+                        <div class="map-wrapper">
+                            <div id="map"></div>
+                        </div>
                         <div class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                             <div class="flex items-start gap-2">
                                 <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">

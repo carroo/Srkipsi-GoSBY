@@ -337,23 +337,20 @@
                                 Terapkan Prioritas
                             </button>
 
-                            <!-- Reset Button -->
-                            <button type="button" onclick="resetCriteria()"
-                                class="w-full mt-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-6 rounded-lg transition duration-300">
-                                Reset ke Default
-                            </button>
 
                             {{-- lanjut ke penjadwalan --}}
-                            <a href="{{ route('itinerary.create') }}"
-                                class="w-full mt-3 block text-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform hover:scale-105 transition duration-300">
-                                <svg class="w-5 h-5 mr-2 inline-block" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                                    </path>
-                                </svg>
-                                Lanjut ke Penjadwalan
-                            </a>
+                            @auth
+                                <a href="{{ route('itinerary.create') }}"
+                                    class="w-full mt-3 block text-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform hover:scale-105 transition duration-300">
+                                    <svg class="w-5 h-5 mr-2 inline-block" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                        </path>
+                                    </svg>
+                                    Lanjut ke Penjadwalan
+                                </a>
+                            @endauth
                             <!-- Warning for Advanced Mode -->
                             <div id="advancedWarning" class="mt-3 text-center text-xs text-red-600 font-semibold"
                                 style="display: none;">
@@ -756,6 +753,17 @@
 
             // Initialize pagination
             initializePagination();
+
+            // Re-render pagination on window resize for responsive behavior
+            let resizeTimeout;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(function() {
+                    if (totalItems > 0) {
+                        updatePagination();
+                    }
+                }, 250);
+            });
         });
 
         function checkLocationInputs() {
@@ -1231,6 +1239,20 @@
 
             if (isLoading) return;
 
+            // Validate if in advanced mode: total must be 100%
+            if (advancedMode) {
+                const visibleInputs = Array.from(document.querySelectorAll('.criteria-item')).filter(item => {
+                    return item.style.display !== 'none';
+                }).map(item => item.querySelector('.weight-input-field'));
+
+                const total = visibleInputs.reduce((sum, input) => sum + (parseInt(input.value) || 0), 0);
+
+                if (total !== 100) {
+                    showNotification(`Gagal menerapkan prioritas! Total bobot harus 100% (saat ini: ${total}%)`, 'error');
+                    return;
+                }
+            }
+
             const formData = new FormData(e.target);
             const params = new URLSearchParams(formData);
 
@@ -1395,12 +1417,15 @@
 
             if (totalPages <= 1) return;
 
+            // Detect mobile screen
+            const isMobile = window.innerWidth < 640; // sm breakpoint in Tailwind
+            const maxButtons = isMobile ? 3 : 5; // Show fewer buttons on mobile
+
             // Previous button
-            const prevBtn = createPaginationButton('‹ Prev', currentPage - 1, currentPage === 1);
+            const prevBtn = createPaginationButton(isMobile ? '‹' : '‹ Prev', currentPage - 1, currentPage === 1, false, isMobile);
             container.appendChild(prevBtn);
 
             // Page numbers
-            const maxButtons = 5;
             let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
             let endPage = Math.min(totalPages, startPage + maxButtons - 1);
 
@@ -1408,9 +1433,9 @@
                 startPage = Math.max(1, endPage - maxButtons + 1);
             }
 
-            // First page + ellipsis
+            // First page + ellipsis (only on desktop or if necessary)
             if (startPage > 1) {
-                container.appendChild(createPaginationButton('1', 1, false));
+                container.appendChild(createPaginationButton('1', 1, false, false, isMobile));
                 if (startPage > 2) {
                     container.appendChild(createEllipsis());
                 }
@@ -1418,26 +1443,29 @@
 
             // Page number buttons
             for (let i = startPage; i <= endPage; i++) {
-                container.appendChild(createPaginationButton(i.toString(), i, false, i === currentPage));
+                container.appendChild(createPaginationButton(i.toString(), i, false, i === currentPage, isMobile));
             }
 
-            // Ellipsis + last page
+            // Ellipsis + last page (only on desktop or if necessary)
             if (endPage < totalPages) {
                 if (endPage < totalPages - 1) {
                     container.appendChild(createEllipsis());
                 }
-                container.appendChild(createPaginationButton(totalPages.toString(), totalPages, false));
+                container.appendChild(createPaginationButton(totalPages.toString(), totalPages, false, false, isMobile));
             }
 
             // Next button
-            const nextBtn = createPaginationButton('Next ›', currentPage + 1, currentPage === totalPages);
+            const nextBtn = createPaginationButton(isMobile ? '›' : 'Next ›', currentPage + 1, currentPage === totalPages, false, isMobile);
             container.appendChild(nextBtn);
         }
 
-        function createPaginationButton(text, page, disabled = false, active = false) {
+        function createPaginationButton(text, page, disabled = false, active = false, isMobile = false) {
             const button = document.createElement('button');
             button.textContent = text;
-            button.className = 'px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ';
+            
+            // Responsive padding and text size
+            const responsiveClasses = isMobile ? 'px-2 py-1.5 text-xs' : 'px-4 py-2 text-sm';
+            button.className = `${responsiveClasses} rounded-lg font-semibold transition-all duration-200 `;
 
             if (disabled) {
                 button.className += 'bg-gray-200 text-gray-400 cursor-not-allowed';
@@ -1455,7 +1483,7 @@
         function createEllipsis() {
             const span = document.createElement('span');
             span.textContent = '...';
-            span.className = 'px-2 py-2 text-gray-400';
+            span.className = 'px-1 sm:px-2 py-1.5 sm:py-2 text-gray-400 text-xs sm:text-sm';
             return span;
         }
 
@@ -1511,7 +1539,7 @@
                         // Change text
                         $buttonText.text('Sudah di Trip');
 
-                        showNotification('Destinasi "' + tourismName + '" berhasil ditambahkan!', 'success');
+                        showNotification('Destinasi "' + tourismName + '" berhasil ditambahkan!, lanjutkan penjadwalan atau tambah destinasi lain', 'success');
                     } else {
                         throw new Error(data.message || 'Terjadi kesalahan');
                     }

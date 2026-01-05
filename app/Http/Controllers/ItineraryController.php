@@ -403,7 +403,8 @@ class ItineraryController extends Controller
                 "coordinates" => [
                     [(float)$lon1, (float)$lat1],
                     [(float)$lon2, (float)$lat2]
-                ]
+                ],
+                "radiuses" => [-1, -1],
             ];
 
             $ch = curl_init();
@@ -438,14 +439,12 @@ class ItineraryController extends Controller
 
             // Fallback
             $distanceKm = $this->calculateDistanceHaversine($lat1, $lon1, $lat2, $lon2);
-            dd("s");
             return [
                 'distance' => $distanceKm * 1000,
                 'duration' => ($distanceKm) * (3600 / 40)
             ];
         } catch (\Exception $e) {
             $distanceKm = $this->calculateDistanceHaversine($lat1, $lon1, $lat2, $lon2);
-            dd("x");
             return [
                 'distance' => $distanceKm * 1000,
                 'duration' => ($distanceKm) * (3600 / 40)
@@ -851,7 +850,7 @@ class ItineraryController extends Controller
     {
         // Get itinerary with details from database
         $itinerary = Itinerary::with(['details.tourism', 'startPoint'])->findOrFail($id);
-        // dd($itinerary);
+        // dd(Auth::id() == $itinerary->user_id);
 
         // Always build data from database
         // Build route array from itinerary details
@@ -903,7 +902,7 @@ class ItineraryController extends Controller
         $itineraryData = [
             'id' => $itinerary->id,
             'name' => $itinerary->name,
-            'is_owner' => Auth::check() && Auth::id() === $itinerary->user_id,
+            'is_owner' => Auth::check() && Auth::id() == $itinerary->user_id,
             'travel_date' => $itinerary->travel_date,
             'start_time' => date('H:i', strtotime($itinerary->start_time)),
             'start_point' => $startPoint,
